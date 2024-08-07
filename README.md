@@ -30,7 +30,7 @@ This tool is designed to create snapshots of Perennial Markets on the Arbitrum n
 2. Install the required Python packages:
 
    ```
-   pip install web3 requests
+   pip install web3 requests eth-abi
    ```
 
 ## Usage
