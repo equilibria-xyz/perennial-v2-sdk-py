@@ -50,7 +50,7 @@ Arguments:
 Example:
 
 ```
-python perennial_snapshot.py --rpc https://arb-mainnet.g.alchemy.com/v2/your-api-key --market btc --account 0x742d35Cc6634C0532925a3b844Bc454e4438f44e
+python main.py --rpc https://arb-mainnet.g.alchemy.com/v2/your-api-key --market btc --account 0x742d35Cc6634C0532925a3b844Bc454e4438f44e
 ```
 
 ## Note
