@@ -1,0 +1,5 @@
+web3==7.0.0
+requests==2.32.3
+eth-account==0.13.2
+eth_abi==5.1.0
+python-dotenv==1.0.1
