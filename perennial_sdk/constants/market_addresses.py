@@ -1,4 +1,4 @@
-# TODO check all tradable markets
+
 
 arbitrum_markets = {
     "eth": "0x90A664846960AaFA2c164605Aebb8e9Ac338f9a0",
@@ -17,5 +17,12 @@ arbitrum_markets = {
     "xau": "0x1A1745e9cc740269D3e75b506e1AbF7Cbf1fE7d3",
     "mog": "0xc8b73eCFdb775cB9899A0d22fFc8d11228Ac35CB",
     "jpy": "0xB7558189c794239ef9453208f2e58Fa049E1035c",
-    "mkr": "0xe8BF156034b64A7266AcD28046F67f3fa7Ecc53a"
+    "mkr": "0xe8BF156034b64A7266AcD28046F67f3fa7Ecc53a",
+    "pol": "0x7e34B5cBc6427Bd53ECFAeFc9AC2Cad04e982f78",
+    "doge":"0x5bef017aC7Ea4f6f59946f27d50A137D4362F6A4",
+    "eur":  "0xb8df4bea28B1F0748D386E8A69ea1bD46B70922d",
+    "gbp":  "0xe588d7d041e18E754e95eF51D77f6e0fC6334EfD",
+    "meem":  "0xbc96A6E57000ADE8755A896DfBd0552FE90141dD",
+    "aero":  "0x24a305EE9BFeBeA7dC26380a96723D6Fb6066C2C",
+    "popcat":  "0xd1551be8c92b35212033B41dBb21efA86389768D"
     }
