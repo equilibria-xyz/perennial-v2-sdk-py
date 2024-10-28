@@ -1,4 +1,20 @@
-oracle_abi = [
+keeper_oracle_abi = [
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "timeout_",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "inputs": [],
+    "name": "DivisionByZero",
+    "type": "error"
+  },
   {
     "inputs": [
       {
@@ -49,27 +65,27 @@ oracle_abi = [
   },
   {
     "inputs": [],
-    "name": "OracleNotBeneficiaryError",
+    "name": "KeeperOracleInvalidCallbackError",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "OracleNotMarketError",
+    "name": "KeeperOracleInvalidPriceError",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "OracleNotSubOracleError",
+    "name": "KeeperOracleNoPriorRequestsError",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "OracleOutOfOrderCommitError",
+    "name": "KeeperOracleNotOracleError",
     "type": "error"
   },
   {
     "inputs": [],
-    "name": "OracleOutOfSyncError",
+    "name": "KeeperOracleVersionOutsideRangeError",
     "type": "error"
   },
   {
@@ -78,35 +94,68 @@ oracle_abi = [
     "type": "error"
   },
   {
+    "inputs": [],
+    "name": "PriceResponseStorageInvalidError",
+    "type": "error"
+  },
+  {
     "anonymous": "false",
     "inputs": [
       {
-        "indexed": "false",
-        "internalType": "address",
-        "name": "newBeneficiary",
-        "type": "address"
+        "components": [
+          {
+            "internalType": "contract IMarket",
+            "name": "market",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "account",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "version",
+            "type": "uint256"
+          }
+        ],
+        "indexed": "true",
+        "internalType": "struct IKeeperOracle.SettlementCallback",
+        "name": "callback",
+        "type": "tuple"
       }
     ],
-    "name": "BeneficiaryUpdated",
+    "name": "CallbackFulfilled",
     "type": "event"
   },
   {
     "anonymous": "false",
     "inputs": [
       {
-        "indexed": "false",
-        "internalType": "UFixed6",
-        "name": "settlementFee",
-        "type": "uint256"
-      },
-      {
-        "indexed": "false",
-        "internalType": "UFixed6",
-        "name": "oracleFee",
-        "type": "uint256"
+        "components": [
+          {
+            "internalType": "contract IMarket",
+            "name": "market",
+            "type": "address"
+          },
+          {
+            "internalType": "address",
+            "name": "account",
+            "type": "address"
+          },
+          {
+            "internalType": "uint256",
+            "name": "version",
+            "type": "uint256"
+          }
+        ],
+        "indexed": "true",
+        "internalType": "struct IKeeperOracle.SettlementCallback",
+        "name": "callback",
+        "type": "tuple"
       }
     ],
-    "name": "FeeReceived",
+    "name": "CallbackRequested",
     "type": "event"
   },
   {
@@ -120,19 +169,6 @@ oracle_abi = [
       }
     ],
     "name": "Initialized",
-    "type": "event"
-  },
-  {
-    "anonymous": "false",
-    "inputs": [
-      {
-        "indexed": "false",
-        "internalType": "contract IMarket",
-        "name": "newMarket",
-        "type": "address"
-      }
-    ],
-    "name": "MarketUpdated",
     "type": "event"
   },
   {
@@ -190,7 +226,7 @@ oracle_abi = [
       {
         "indexed": "false",
         "internalType": "contract IOracleProvider",
-        "name": "newProvider",
+        "name": "newOracle",
         "type": "address"
       }
     ],
@@ -226,7 +262,7 @@ oracle_abi = [
           }
         ],
         "internalType": "struct OracleVersion",
-        "name": "atVersion",
+        "name": "",
         "type": "tuple"
       },
       {
@@ -243,21 +279,8 @@ oracle_abi = [
           }
         ],
         "internalType": "struct OracleReceipt",
-        "name": "atReceipt",
-        "type": "tuple"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "beneficiary",
-    "outputs": [
-      {
-        "internalType": "address",
         "name": "",
-        "type": "address"
+        "type": "tuple"
       }
     ],
     "stateMutability": "view",
@@ -266,12 +289,39 @@ oracle_abi = [
   {
     "inputs": [
       {
-        "internalType": "UFixed6",
-        "name": "settlementFeeRequested",
+        "components": [
+          {
+            "internalType": "uint256",
+            "name": "timestamp",
+            "type": "uint256"
+          },
+          {
+            "internalType": "Fixed6",
+            "name": "price",
+            "type": "int256"
+          },
+          {
+            "internalType": "bool",
+            "name": "valid",
+            "type": "bool"
+          }
+        ],
+        "internalType": "struct OracleVersion",
+        "name": "version",
+        "type": "tuple"
+      },
+      {
+        "internalType": "address",
+        "name": "receiver",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "value",
         "type": "uint256"
       }
     ],
-    "name": "claimFee",
+    "name": "commit",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -307,32 +357,33 @@ oracle_abi = [
     "name": "global",
     "outputs": [
       {
-        "internalType": "uint128",
-        "name": "current",
-        "type": "uint128"
-      },
-      {
-        "internalType": "uint128",
-        "name": "latest",
-        "type": "uint128"
+        "components": [
+          {
+            "internalType": "uint64",
+            "name": "latestVersion",
+            "type": "uint64"
+          },
+          {
+            "internalType": "uint64",
+            "name": "currentIndex",
+            "type": "uint64"
+          },
+          {
+            "internalType": "uint64",
+            "name": "latestIndex",
+            "type": "uint64"
+          }
+        ],
+        "internalType": "struct IKeeperOracle.KeeperOracleGlobal",
+        "name": "",
+        "type": "tuple"
       }
     ],
     "stateMutability": "view",
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "contract IOracleProvider",
-        "name": "initialProvider",
-        "type": "address"
-      },
-      {
-        "internalType": "string",
-        "name": "name_",
-        "type": "string"
-      }
-    ],
+    "inputs": [],
     "name": "initialize",
     "outputs": [],
     "stateMutability": "nonpayable",
@@ -361,34 +412,8 @@ oracle_abi = [
           }
         ],
         "internalType": "struct OracleVersion",
-        "name": "",
+        "name": "latestVersion",
         "type": "tuple"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "market",
-    "outputs": [
-      {
-        "internalType": "contract IMarket",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "name",
-    "outputs": [
-      {
-        "internalType": "string",
-        "name": "",
-        "type": "string"
       }
     ],
     "stateMutability": "view",
@@ -398,21 +423,42 @@ oracle_abi = [
     "inputs": [
       {
         "internalType": "uint256",
+        "name": "version",
+        "type": "uint256"
+      }
+    ],
+    "name": "localCallbacks",
+    "outputs": [
+      {
+        "internalType": "address[]",
+        "name": "",
+        "type": "address[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "next",
+    "outputs": [
+      {
+        "internalType": "uint256",
         "name": "",
         "type": "uint256"
       }
     ],
-    "name": "oracles",
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "oracle",
     "outputs": [
       {
-        "internalType": "contract IOracleProvider",
-        "name": "provider",
+        "internalType": "contract IOracle",
+        "name": "",
         "type": "address"
-      },
-      {
-        "internalType": "uint96",
-        "name": "timestamp",
-        "type": "uint96"
       }
     ],
     "stateMutability": "view",
@@ -421,8 +467,8 @@ oracle_abi = [
   {
     "inputs": [
       {
-        "internalType": "contract IMarket",
-        "name": "newMarket",
+        "internalType": "contract IOracle",
+        "name": "newOracle",
         "type": "address"
       }
     ],
@@ -450,6 +496,94 @@ oracle_abi = [
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "requests",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "timestamp",
+        "type": "uint256"
+      }
+    ],
+    "name": "responses",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "Fixed6",
+            "name": "price",
+            "type": "int256"
+          },
+          {
+            "internalType": "UFixed6",
+            "name": "syncFee",
+            "type": "uint256"
+          },
+          {
+            "internalType": "UFixed6",
+            "name": "asyncFee",
+            "type": "uint256"
+          },
+          {
+            "internalType": "UFixed6",
+            "name": "oracleFee",
+            "type": "uint256"
+          },
+          {
+            "internalType": "bool",
+            "name": "valid",
+            "type": "bool"
+          }
+        ],
+        "internalType": "struct PriceResponse",
+        "name": "",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "version",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "maxCount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "receiver",
+        "type": "address"
+      }
+    ],
+    "name": "settle",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "status",
     "outputs": [
@@ -472,12 +606,12 @@ oracle_abi = [
           }
         ],
         "internalType": "struct OracleVersion",
-        "name": "latestVersion",
+        "name": "",
         "type": "tuple"
       },
       {
         "internalType": "uint256",
-        "name": "currentTimestamp",
+        "name": "",
         "type": "uint256"
       }
     ],
@@ -485,55 +619,16 @@ oracle_abi = [
     "type": "function"
   },
   {
-    "inputs": [
+    "inputs": [],
+    "name": "timeout",
+    "outputs": [
       {
-        "internalType": "contract IOracleProvider",
-        "name": "newProvider",
-        "type": "address"
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
       }
     ],
-    "name": "update",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "newBeneficiary",
-        "type": "address"
-      }
-    ],
-    "name": "updateBeneficiary",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "newName",
-        "type": "string"
-      }
-    ],
-    "name": "updateName",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "Token18",
-        "name": "token",
-        "type": "address"
-      }
-    ],
-    "name": "withdraw",
-    "outputs": [],
-    "stateMutability": "nonpayable",
+    "stateMutability": "view",
     "type": "function"
   }
 ]
