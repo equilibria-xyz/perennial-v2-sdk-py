@@ -3,10 +3,10 @@ from perennial_sdk.artifacts.lens_abi import *
 from perennial_sdk.utils.pyth_utils import *
 from perennial_sdk.utils.decoder_utils import *
 from perennial_sdk.config import *
+from operator import attrgetter
 
 
-# Function to extract oracle info:
-def fetch_oracle_info(market_address: str, provider_id: str) -> tuple:
+def fetch_oracle_info(market_address: str, provider_id: str) -> dict:
     """
     Retrieve oracle information for a given market address.
 
@@ -18,54 +18,58 @@ def fetch_oracle_info(market_address: str, provider_id: str) -> tuple:
         provider_id (str): The provider ID of the smart contract.
 
     Returns:
-        tuple: A tuple containing (factory_address, min_valid_time, underlying_id).
+        dict: A dictionary containing various oracle and market information.
     """
+    print("Fetching: ", market_address)
 
     # Create a contract instance for the market
     market_contract = web3.eth.contract(address=market_address, abi=market_abi)
 
-    # Get the oracle address from the market contract
+    # Fetch risk parameter and oracle address concurrently
+    riskParameter = market_contract.functions.riskParameter().call()
     oracle_address = market_contract.functions.oracle().call()
 
-    # Create a contract instance for the oracle
+    # Fetch oracle data
     oracle_contract = web3.eth.contract(address=oracle_address, abi=oracle_abi)
-
-    # Get the current and latest oracle versions
     global_function = getattr(oracle_contract.functions, "global")
     current_oracle, latest_oracle = global_function().call()
+    oracle_name = oracle_contract.functions.name().call()
+    
+    # Get the factory address from the keeper oracle contract
+    oracle_factory_address = oracle_contract.functions.factory().call()
+    oracle_factory_contract = web3.eth.contract(address=oracle_factory_address, abi=oracle_factory_abi)
+    id = oracle_factory_contract.functions.ids(oracle_address).call()
+    print(oracle_factory_contract, oracle_address, id)
 
     # Retrieve oracle information for the current version
-    oracles = oracle_contract.functions.oracles(current_oracle).call()
+    keeper_oracle_address = oracle_contract.functions.oracles(current_oracle).call()[0]
+    keeper_oracle_contract = web3.eth.contract(address=keeper_oracle_address, abi=keeper_oracle_abi)
+    sub_oracle_factory_address = keeper_oracle_contract.functions.factory().call()
+    
+    sub_oracle_factory = web3.eth.contract(address=sub_oracle_factory_address, abi=keeper_factory_abi)
 
-    # Extract the Pyth oracle address
-    pyth_oracle_address = oracles[0]
-    current_oracle_timestamp = oracles[1]
+    # Fetch parameters and IDs concurrently
+    parameter = sub_oracle_factory.functions.parameter().call()
+    underlying_id = sub_oracle_factory.functions.toUnderlyingId(id).call()
+    sub_oracle_factory_type = sub_oracle_factory.functions.factoryType().call()
+    commitment_gas_oracle = sub_oracle_factory.functions.commitmentGasOracle().call()
+    settlement_gas_oracle = sub_oracle_factory.functions.settlementGasOracle().call()
 
-    # Create a contract instance for the Pyth oracle
-    pyth_oracle_contract = web3.eth.contract(
-        address=pyth_oracle_address, abi=pyth_oracle_abi
-    )
-
-    # Get the factory address from the Pyth oracle contract
-    factory_address = pyth_oracle_contract.functions.factory().call()
-
-    # Create a contract instance for the factory
-    factory = web3.eth.contract(address=factory_address, abi=keeper_abi)
-
-    # Get the minimum valid time from the factory contract
-    min_valid_time = factory.functions.validFrom().call()
-
-    # Get the underlying ID for the given provider ID
-    underlying_id = factory.functions.toUnderlyingId(provider_id).call()
-
-    # Return the collected information
-    return (
-        latest_oracle,
-        current_oracle,
-        current_oracle_timestamp,
-        factory_address,
-        min_valid_time,
-        underlying_id)
+    # Return the collected information as a dictionary
+    return {
+        "id": id,
+        "oracleName": oracle_name,
+        "oracleFactoryAddress": oracle_factory_address,
+        "oracleAddress": oracle_address,
+        "subOracleFactoryAddress": sub_oracle_factory_address,
+        "subOracleAddress": sub_oracle_factory_address,
+        "subOracleFactoryType": sub_oracle_factory_type,
+        "underlyingId": underlying_id,
+        "minValidTime": int(parameter[4]), # validFrom is at index 4
+        "staleAfter": int(riskParameter[11]),  # Assuming staleAfter is at index 11
+        "commitmentGasOracle": commitment_gas_oracle,
+        "settlementGasOracle": settlement_gas_oracle,
+    }
 
 # Function to create a market snapshot:
 def fetch_market_snapshot(markets):
@@ -76,18 +80,19 @@ def fetch_market_snapshot(markets):
     market_addresses = []
 
     for market in markets:
-        latest_oracle,current_oracle,current_oracle_timestamp,factory_address,min_valid_time,underlying_id = fetch_oracle_info(
+
+        oracle_info = fetch_oracle_info(
             arbitrum_markets[market], market_provider_ids[market]
         )
-
-        vaa_data, publish_time = get_vaa(underlying_id.hex(), min_valid_time)
+        print(oracle_info['underlyingId'])
+        vaa_data, publish_time = get_vaa(oracle_info['underlyingId'].hex(), oracle_info['minValidTime'])
 
         price_commitments.append(
             {
-                "keeperFactory": factory_address,
-                "version": publish_time - min_valid_time,
+                "keeperFactory": oracle_info['subOracleFactoryAddress'],
+                "version": publish_time - oracle_info['minValidTime'],
                 "value": 1,
-                "ids": [Web3.to_bytes(hexstr=underlying_id.hex())],
+                "ids": [Web3.to_bytes(hexstr=oracle_info['underlyingId'].hex())],
                 "updateData":Web3.to_bytes(hexstr='0x'+vaa_data)
             }
         )
@@ -142,7 +147,7 @@ def fetch_market_snapshot(markets):
         },
     )
 
-    r = requests.post(infura_url, json=json_payload)
+    r = requests.post(rpc_url, json=json_payload)
     data = r.json()[0]["result"]
 
     return decode_call_data(data, "snapshot", lens_abi)

@@ -5,14 +5,8 @@ from perennial_sdk.config import *
 # Get VAA (Validator Action Approval)
 def get_vaa(id, min_valid_time):
 
-    # Calculate the query time
-    current_time = int(time.time())
-    query_time = current_time - min_valid_time
-
     # Construct the full URL with query parameters
-    # url = f"{pyth_url}?id={id}&publish_time={query_time}" OLDDD
     url = f"{pyth_url}?ids%5B%5D={id}"
-
     # Make the GET request
     response = requests.get(url)
     data = response.json()
