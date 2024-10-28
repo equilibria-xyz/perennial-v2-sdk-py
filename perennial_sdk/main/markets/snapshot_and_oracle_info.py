@@ -20,7 +20,6 @@ def fetch_oracle_info(market_address: str, provider_id: str) -> dict:
     Returns:
         dict: A dictionary containing various oracle and market information.
     """
-    print("Fetching: ", market_address)
 
     # Create a contract instance for the market
     market_contract = web3.eth.contract(address=market_address, abi=market_abi)
@@ -39,7 +38,6 @@ def fetch_oracle_info(market_address: str, provider_id: str) -> dict:
     oracle_factory_address = oracle_contract.functions.factory().call()
     oracle_factory_contract = web3.eth.contract(address=oracle_factory_address, abi=oracle_factory_abi)
     id = oracle_factory_contract.functions.ids(oracle_address).call()
-    print(oracle_factory_contract, oracle_address, id)
 
     # Retrieve oracle information for the current version
     keeper_oracle_address = oracle_contract.functions.oracles(current_oracle).call()[0]
@@ -84,7 +82,6 @@ def fetch_market_snapshot(markets):
         oracle_info = fetch_oracle_info(
             arbitrum_markets[market], market_provider_ids[market]
         )
-        print(oracle_info['underlyingId'])
         vaa_data, publish_time = get_vaa(oracle_info['underlyingId'].hex(), oracle_info['minValidTime'])
 
         price_commitments.append(
