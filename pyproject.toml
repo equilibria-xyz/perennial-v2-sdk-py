@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "perennial_sdk"
+version = "0.1.0"
+description = "An SDK to interact with the Perennial derivatives protocol."
+authors = ["l3wi"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.13"
+python-dotenv = "1.0.1"
+web3 = "7.0.0"
+requests = "2.32.3"
+eth-account = "0.13.2"
+eth_abi = "5.1.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
