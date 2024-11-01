@@ -25,6 +25,18 @@ class PositionDetails:
                 f"Pre-Update Collateral: ${self.pre_update_collateral}\n"
                 f"Post-Update Collateral: ${self.post_update_collateral}\n")
 
+    def get_position_object(self):
+            return {
+                    "Market": self.market,
+                    "Side": self.side,
+                    "Amount": self.amount,
+                    "Execution Price": self.exec_price,
+                    "Latest Price": self.latest_price,
+                    "Opened At": self.timestamp,
+                    "Pre-Update Collateral": self.pre_update_collateral,
+                    "Post-Update Collateral": self.post_update_collateral
+            }
+
 
 class AccountInfo:
 
@@ -71,4 +83,4 @@ class AccountInfo:
             timestamp=trade_opened_utc,
             pre_update_collateral=pre_update_collateral,
             post_update_collateral=post_update_collateral
-        )
+        ).get_position_object()
