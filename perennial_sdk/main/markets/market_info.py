@@ -13,6 +13,13 @@ class MarketPriceInfo:
                 f"Pre-update Market Price: ${self.pre_update_price}\n"
                 f"Latest Market Price: ${self.latest_price}\n")
 
+    def get_market_prices(self) -> dict:
+        return {
+            "Market": self.market,
+            "Pre-update Market Price": self.pre_update_price,
+            "Latest Market Price": self.latest_price
+        }
+
 class MarketFundingRateInfo:
     def __init__(self, market, funding_fee_long_annual, funding_fee_long_hourly, interest_fee_long_annual,
                  interest_fee_long_hourly, funding_rate_long_annual, funding_rate_long_hourly,
@@ -42,6 +49,15 @@ class MarketFundingRateInfo:
                 f"Interest Fee SHORT (Hourly): {self.interest_fee_short_hourly}% | (Annual): {self.interest_fee_short_annual}%\n"
                 f"Funding Rate SHORT (Hourly): {self.funding_rate_short_hourly}% | (Annual): {self.funding_rate_short_annual}%\n")
 
+    def get_net_rates(self) -> dict:
+        hourly_net_rate_long = self.funding_rate_long_annual - (self.funding_fee_long_hourly + self.interest_fee_long_hourly)
+        hourly_net_rate_short = self.funding_rate_short_annual - (self.funding_fee_short_hourly + self.interest_fee_short_hourly)
+        return {
+            "Market": self.market,
+            "net_rate_long_1hr": hourly_net_rate_long,
+            "net_rate_short_1hr": hourly_net_rate_short
+        }
+
 class MarginMaintenanceInfo:
     def __init__(self, market, margin_fee, min_margin, maintenance_fee, min_maintenance):
         self.market = market
@@ -57,6 +73,15 @@ class MarginMaintenanceInfo:
                 f"Min Margin: ${self.min_margin}\n"
                 f"Maintenance Fee: {self.maintenance_fee}%\n"
                 f"Min Maintenance: ${self.min_maintenance}\n")
+
+    def get_maintenence_margin(self) -> dict:
+    return {
+        "market": self.market,
+        "margin_fee": self.margin_fee,
+        "min_margin": self.min_margin,
+        "maintenance_fee": self.maintenance_fee,
+        "min_maintenance": self.min_maintenance
+    }
 
 class MarketInfo:
     def __init__(self, market_ad):
@@ -95,7 +120,7 @@ class MarketInfo:
             interest_fee_short_hourly=interest_fee_short_hourly,
             funding_rate_short_annual=funding_rate_short_annual,
             funding_rate_short_hourly=funding_rate_short_hourly
-        )
+        ).get_net_rates()
 
     @staticmethod
     def fetch_margin_maintenance_info(market_address):
@@ -112,4 +137,4 @@ class MarketInfo:
             min_margin=min_margin,
             maintenance_fee=maintenance_fee,
             min_maintenance=min_maintenance
-        )
+        ).get_maintenence_margin()
