@@ -6,6 +6,7 @@ from perennial_sdk.config import *
 from operator import attrgetter
 
 
+
 def fetch_oracle_info(market_address: str, provider_id: str) -> dict:
     """
     Retrieve oracle information for a given market address.

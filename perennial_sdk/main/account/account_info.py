@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from perennial_sdk.main.markets import *
+from perennial_sdk.main.markets.market_info import MarginMaintenanceInfo
 
 
 class PositionDetails:
@@ -14,27 +15,16 @@ class PositionDetails:
         self.pre_update_collateral = pre_update_collateral
         self.post_update_collateral = post_update_collateral
 
-    def __str__(self):
-        return (f"Position Details:\n"
-                f"Market: {self.market}\n"
-                f"Side: {self.side}\n"
-                f"Amount: {self.amount} units\n"
-                f"Execution Price: ${self.exec_price}\n"
-                f"Latest Price: ${self.latest_price}\n"
-                f"Opened At: {self.timestamp}\n"
-                f"Pre-Update Collateral: ${self.pre_update_collateral}\n"
-                f"Post-Update Collateral: ${self.post_update_collateral}\n")
-
     def get_position_object(self):
             return {
-                    "Market": self.market,
-                    "Side": self.side,
-                    "Amount": self.amount,
-                    "Execution Price": self.exec_price,
-                    "Latest Price": self.latest_price,
-                    "Opened At": self.timestamp,
-                    "Pre-Update Collateral": self.pre_update_collateral,
-                    "Post-Update Collateral": self.post_update_collateral
+                    "market": self.market,
+                    "side": self.side,
+                    "size_in_asset": self.amount,
+                    "execution_price": self.exec_price,
+                    "latest_price": self.latest_price,
+                    "opened_at": self.timestamp,
+                    "pre_update_collateral": self.pre_update_collateral,
+                    "post_update_collateral": self.post_update_collateral
             }
 
 
@@ -84,3 +74,45 @@ class AccountInfo:
             pre_update_collateral=pre_update_collateral,
             post_update_collateral=post_update_collateral
         ).get_position_object()
+
+    @staticmethod
+    def get_liquidation_price_for_position(market_address: str) -> float:
+        try:
+            position_details = AccountInfo.fetch_open_positions(market_address)
+            maintenance_margin = MarginMaintenanceInfo.get_maintenence_margin()
+            liquidation_price = AccountInfo.calculate_liquidation_price(
+                position_details,
+                maintenance_margin
+            )
+
+            return liquidation_price
+        
+        except Exception as e:
+            print(f'Account_info.py - Error while calculating liquidation price for position. Error: {e}')
+            return None
+    
+    @staticmethod
+    def calculate_liquidation_price(position_details: dict, maintenance_margin: dict) -> float:
+        try:
+            is_long = False
+            if position_details['side'] == 'LONG':
+                is_long = True
+
+            execution_price = position_details["execution_price"]
+            collateral = position_details["post_update_collateral"]
+            amount = position_details["size_in_asset"]
+            min_maintenance_margin = maintenance_margin["min_maintenance_margin"]
+
+            position_size = amount * execution_price
+
+            if is_long:
+                liquidation_price = execution_price - ((collateral - (position_size * min_maintenance_margin)) / amount)
+            else:
+                liquidation_price = execution_price + ((collateral - (position_size * min_maintenance_margin)) / amount)
+
+            return liquidation_price
+        
+        except Exception as e:
+            print(f'Account_info.py - Error while calculating liquidation price for position. Error: {e}')
+            return None
+

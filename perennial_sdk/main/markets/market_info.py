@@ -7,12 +7,6 @@ class MarketPriceInfo:
         self.pre_update_price = pre_update_price
         self.latest_price = latest_price
 
-    def __str__(self):
-        return (f"Market Price Info:\n"
-                f"Market: {self.market}\n"
-                f"Pre-update Market Price: ${self.pre_update_price}\n"
-                f"Latest Market Price: ${self.latest_price}\n")
-
     def get_market_prices(self) -> dict:
         return {
             "Market": self.market,
@@ -39,15 +33,17 @@ class MarketFundingRateInfo:
         self.funding_rate_short_annual = funding_rate_short_annual
         self.funding_rate_short_hourly = funding_rate_short_hourly
 
-    def __str__(self):
-        return (f"Market Funding Rate Info:\n"
-                f"Market: {self.market}\n"
-                f"Funding Fee LONG (Hourly): {self.funding_fee_long_hourly}% | (Annual): {self.funding_fee_long_annual}%\n"
-                f"Interest Fee LONG (Hourly): {self.interest_fee_long_hourly}% | (Annual): {self.interest_fee_long_annual}%\n"
-                f"Funding Rate LONG (Hourly): {self.funding_rate_long_hourly}% | (Annual): {self.funding_rate_long_annual}%\n"
-                f"Funding Fee SHORT (Hourly): {self.funding_fee_short_hourly}% | (Annual): {self.funding_fee_short_annual}%\n"
-                f"Interest Fee SHORT (Hourly): {self.interest_fee_short_hourly}% | (Annual): {self.interest_fee_short_annual}%\n"
-                f"Funding Rate SHORT (Hourly): {self.funding_rate_short_hourly}% | (Annual): {self.funding_rate_short_annual}%\n")
+    def get_all_rates(self) -> dict:
+       return {
+            "market": self.market,
+            "funding_fee_long_hourly": self.funding_fee_long_hourly,
+            "interest_fee_long_hourly": self.interest_fee_long_hourly,
+            "funding_rate_long_hourly": self.funding_rate_long_hourly,
+            "funding_fee_short_hourly": self.funding_fee_short_hourly,
+            "interest_fee_short_hourly": self.interest_fee_short_hourly,
+            "funding_rate_short_hourly": self.funding_rate_short_hourly,
+}
+
 
     def get_net_rates(self) -> dict:
         hourly_net_rate_long = self.funding_rate_long_annual - (self.funding_fee_long_hourly + self.interest_fee_long_hourly)
@@ -66,26 +62,18 @@ class MarginMaintenanceInfo:
         self.maintenance_fee = maintenance_fee
         self.min_maintenance = min_maintenance
 
-    def __str__(self):
-        return (f"Margin Maintenance Info:\n"
-                f"Market: {self.market}\n"
-                f"Margin Fee: {self.margin_fee}%\n"
-                f"Min Margin: ${self.min_margin}\n"
-                f"Maintenance Fee: {self.maintenance_fee}%\n"
-                f"Min Maintenance: ${self.min_maintenance}\n")
-
     def get_maintenence_margin(self) -> dict:
-    return {
-        "market": self.market,
-        "margin_fee": self.margin_fee,
-        "min_margin": self.min_margin,
-        "maintenance_fee": self.maintenance_fee,
-        "min_maintenance": self.min_maintenance
-    }
+        return {
+            "market": self.market,
+            "margin_fee": self.margin_fee,
+            "min_margin": self.min_margin,
+            "maintenance_fee": self.maintenance_fee,
+            "min_maintenance": self.min_maintenance
+        }
 
 class MarketInfo:
-    def __init__(self, market_ad):
-        self.market_ad = market_ad
+    def __init__(self, market_address):
+        self.market_address = market_address
 
     @staticmethod
     def fetch_market_price(market_address):
