@@ -97,7 +97,7 @@ def fetch_market_snapshot(markets):
         market_addresses.append(arbitrum_markets[market])
 
     calldata = lens_contract.encode_abi(
-        abi_element_identifier="snapshot",
+        fn_name = 'snapshot',
         args=[
             price_commitments,
             market_addresses,
