@@ -1581,14 +1581,29 @@ socks = ["pysocks (>=1.5.6,!=1.5.7,<2.0)"]
 zstd = ["zstandard (>=0.18.0)"]
 
 [[package]]
+name = "w3multicall"
+version = "0.3.1"
+description = "Python interface and utilities for Solidity multicall contract"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "w3multicall-0.3.1-py3-none-any.whl", hash = "sha256:04f95d6ee64c9b2ab3bc9d7a3b2bac4a717fe9f8523f5aba6e7550086efcdad2"},
+    {file = "w3multicall-0.3.1.tar.gz", hash = "sha256:24c7bf3aac8cb8f8c62dd555212b3b5e87d6e7cf9cc4b3f3769a819bb9c55846"},
+]
+
+[package.dependencies]
+requests = "*"
+web3 = "*"
+
+[[package]]
 name = "web3"
-version = "7.0.0"
+version = "7.5.0"
 description = "web3: A Python library for interacting with Ethereum"
 optional = false
 python-versions = "<4,>=3.8"
 files = [
-    {file = "web3-7.0.0-py3-none-any.whl", hash = "sha256:8434daabc4e95f63a21501e7ba7e07fd9ced9b4481e68c5ac864aa91201ac9c4"},
-    {file = "web3-7.0.0.tar.gz", hash = "sha256:a1afc7f98c1d1fc899e61549c74ef5bc3d7b03f33be66e6a4a4378342cb049de"},
+    {file = "web3-7.5.0-py3-none-any.whl", hash = "sha256:16fea8ee9c042a60edfdc2388c4d2c0177a9be383c76a4913cf9acb156df1954"},
+    {file = "web3-7.5.0.tar.gz", hash = "sha256:42477d076c745da05e595e8aec91a3a168d87b09b85b0424181cac69edb9b4a2"},
 ]
 
 [package.dependencies]
@@ -1608,9 +1623,10 @@ typing-extensions = ">=4.0.1"
 websockets = ">=10.0.0"
 
 [package.extras]
-dev = ["build (>=0.9.0)", "bumpversion (>=0.5.3)", "eth-account (>=0.13.0)", "eth-tester[py-evm] (>=0.11.0b1,<0.13.0b1)", "flaky (>=3.7.0)", "hypothesis (>=3.31.2)", "ipython", "mypy (==1.10.0)", "pre-commit (>=3.4.0)", "py-geth (>=5.0.0b1)", "pytest (>=7.0.0)", "pytest-asyncio (>=0.18.1,<0.23)", "pytest-asyncio (>=0.21.2,<0.23)", "pytest-mock (>=1.10)", "pytest-xdist (>=2.4.0)", "setuptools (>=38.6.0)", "sphinx (>=6.0.0)", "sphinx-autobuild (>=2021.3.14)", "sphinx-rtd-theme (>=1.0.0)", "towncrier (>=21,<22)", "tox (>=4.0.0)", "tqdm (>4.32)", "twine (>=1.13)", "wheel"]
-docs = ["eth-account (>=0.13.0)", "sphinx (>=6.0.0)", "sphinx-autobuild (>=2021.3.14)", "sphinx-rtd-theme (>=1.0.0)", "towncrier (>=21,<22)"]
-test = ["eth-tester[py-evm] (>=0.11.0b1,<0.13.0b1)", "py-geth (>=5.0.0b1)", "pytest (>=7.0.0)", "pytest-asyncio (>=0.18.1,<0.23)", "pytest-mock (>=1.10)", "pytest-xdist (>=2.4.0)"]
+dev = ["build (>=0.9.0)", "bumpversion (>=0.5.3)", "eth-tester[py-evm] (>=0.11.0b1,<0.13.0b1)", "flaky (>=3.7.0)", "hypothesis (>=3.31.2)", "ipython", "mypy (==1.10.0)", "pre-commit (>=3.4.0)", "py-geth (>=5.0.0)", "pytest (>=7.0.0)", "pytest-asyncio (>=0.18.1,<0.23)", "pytest-mock (>=1.10)", "pytest-xdist (>=2.4.0)", "setuptools (>=38.6.0)", "sphinx (>=6.0.0)", "sphinx-autobuild (>=2021.3.14)", "sphinx-rtd-theme (>=1.0.0)", "towncrier (>=21,<22)", "tox (>=4.0.0)", "tqdm (>4.32)", "twine (>=1.13)", "wheel"]
+docs = ["sphinx (>=6.0.0)", "sphinx-autobuild (>=2021.3.14)", "sphinx-rtd-theme (>=1.0.0)", "towncrier (>=21,<22)"]
+test = ["eth-tester[py-evm] (>=0.11.0b1,<0.13.0b1)", "flaky (>=3.7.0)", "hypothesis (>=3.31.2)", "mypy (==1.10.0)", "pre-commit (>=3.4.0)", "py-geth (>=5.0.0)", "pytest (>=7.0.0)", "pytest-asyncio (>=0.18.1,<0.23)", "pytest-mock (>=1.10)", "pytest-xdist (>=2.4.0)", "tox (>=4.0.0)"]
+tester = ["eth-tester[py-evm] (>=0.11.0b1,<0.13.0b1)", "py-geth (>=5.0.0)"]
 
 [[package]]
 name = "websockets"
@@ -1806,4 +1822,4 @@ propcache = ">=0.2.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.13"
-content-hash = "7318e86136a15ebf937cae47ebed071879a853198edaf5dd5d4b6b398e1e85d5"
+content-hash = "0094a22d3680a453edec5e46cf1bb623a8e67faaf197de4a5173ab7c1d7bbba1"

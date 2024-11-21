@@ -8,10 +8,11 @@ readme = "README.md"
 [tool.poetry.dependencies]
 python = "^3.13"
 python-dotenv = "1.0.1"
-web3 = "7.0.0"
+web3 = "7.5.0"
 requests = "2.32.3"
 eth-account = "0.13.2"
 eth_abi = "5.1.0"
+w3multicall = "^0.3.1"
 
 
 [build-system]
