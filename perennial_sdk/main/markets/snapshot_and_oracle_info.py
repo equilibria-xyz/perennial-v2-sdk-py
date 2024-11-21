@@ -6,6 +6,7 @@ from perennial_sdk.config import *
 from operator import attrgetter
 
 
+
 def fetch_oracle_info(market_address: str, provider_id: str) -> dict:
     """
     Retrieve oracle information for a given market address.
@@ -96,7 +97,7 @@ def fetch_market_snapshot(markets):
         market_addresses.append(arbitrum_markets[market])
 
     calldata = lens_contract.encode_abi(
-        abi_element_identifier="snapshot",
+        abi_element_identifier = 'snapshot',
         args=[
             price_commitments,
             market_addresses,
