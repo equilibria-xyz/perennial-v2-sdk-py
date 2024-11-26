@@ -12,7 +12,7 @@ def approve_usdc_to_dsu(collateral_amount: float):
     # Convert to smallest unit (6 decimals for USDC)
     amount_usdc = int(collateral_amount * 10 ** 6)
 
-    approve_tx = usdc_contract.functions.approve(multi_invoker_address, amount_usdc).build_transaction({
+    approve_tx = usdc_contract.functions.approve(MULTI_INVOKER_ADDRESS, amount_usdc).build_transaction({
         'from': account_address,
         'nonce': web3.eth.get_transaction_count(account_address),
         'gas': 2000000,
@@ -46,7 +46,7 @@ def commit_price_to_multi_invoker(market_address: str):
     }
 
     # Step 4: Create the contract instance for MultiInvoker
-    multi_invoker = web3.eth.contract(address=multi_invoker_address, abi=multi_invoker_abi)
+    multi_invoker = web3.eth.contract(address=MULTI_INVOKER_ADDRESS, abi=multi_invoker_abi)
 
     base_fee_per_gas = web3.eth.fee_history(1, "latest")["baseFeePerGas"][-1]
     max_fee_per_gas = base_fee_per_gas + Web3.to_wei(2, 'gwei')
@@ -106,7 +106,7 @@ def close_position_in_market(market_address: str):
     ]
 
     # Step 2: Create the contract instance for MultiInvoker
-    multi_invoker = web3.eth.contract(address=multi_invoker_address, abi=multi_invoker_abi)
+    multi_invoker = web3.eth.contract(address=MULTI_INVOKER_ADDRESS, abi=multi_invoker_abi)
 
     base_fee_per_gas = web3.eth.fee_history(1, "latest")["baseFeePerGas"][-1]
     max_fee_per_gas = base_fee_per_gas + Web3.to_wei(2, 'gwei')
@@ -165,7 +165,7 @@ def withdraw_collateral(market_address: str):
         (0, "0x0000000000000000000000000000000000000000", False)  # interfaceFee2 (amount, receiver, unwrap)
     ]
     # Step 2: Create the contract instance for MultiInvoker
-    multi_invoker = web3.eth.contract(address=multi_invoker_address, abi=multi_invoker_abi)
+    multi_invoker = web3.eth.contract(address=MULTI_INVOKER_ADDRESS, abi=multi_invoker_abi)
 
     base_fee_per_gas = web3.eth.fee_history(1, "latest")["baseFeePerGas"][-1]
     max_fee_per_gas = base_fee_per_gas + Web3.to_wei(2, 'gwei')
@@ -279,7 +279,7 @@ def place_market_order(market_address: str, long_amount: float, short_amount: fl
     ]
 
     # Step 2: Create the contract instance for MultiInvoker
-    multi_invoker = web3.eth.contract(address=multi_invoker_address, abi=multi_invoker_abi)
+    multi_invoker = web3.eth.contract(address=MULTI_INVOKER_ADDRESS, abi=multi_invoker_abi)
 
     base_fee_per_gas = web3.eth.fee_history(1, "latest")["baseFeePerGas"][-1]
     max_fee_per_gas = base_fee_per_gas + Web3.to_wei(2.2, 'gwei')

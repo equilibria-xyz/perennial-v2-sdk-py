@@ -133,7 +133,7 @@ def fetch_market_snapshot(markets):
                         "code": lens_deployedbytecode,
                         "balance": "0x3635c9adc5dea00000",
                     },
-                    market_factory_address: {
+                    MARKET_FACTORY_ADDRESS: {
                         "stateDiff": {
                             web3.to_hex(
                                 operator_storage_index
