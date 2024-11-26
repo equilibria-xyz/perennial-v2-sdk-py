@@ -1,4 +1,4 @@
-market_factory_abi =[
+MARKET_FACTORY_ABI =[
   {
     "inputs": [
       {

@@ -23,29 +23,29 @@ def fetch_oracle_info(market_address: str, provider_id: str) -> dict:
     """
 
     # Create a contract instance for the market
-    market_contract = web3.eth.contract(address=market_address, abi=market_abi)
+    market_contract = web3.eth.contract(address=market_address, abi=MARKET_ABI)
 
     # Fetch risk parameter and oracle address concurrently
     riskParameter = market_contract.functions.riskParameter().call()
     oracle_address = market_contract.functions.oracle().call()
 
     # Fetch oracle data
-    oracle_contract = web3.eth.contract(address=oracle_address, abi=oracle_abi)
+    oracle_contract = web3.eth.contract(address=oracle_address, abi=ORACLE_ABI)
     global_function = getattr(oracle_contract.functions, "global")
     current_oracle, latest_oracle = global_function().call()
     oracle_name = oracle_contract.functions.name().call()
     
     # Get the factory address from the keeper oracle contract
     oracle_factory_address = oracle_contract.functions.factory().call()
-    oracle_factory_contract = web3.eth.contract(address=oracle_factory_address, abi=oracle_factory_abi)
+    oracle_factory_contract = web3.eth.contract(address=oracle_factory_address, abi=ORACLE_FACTORY_ABI)
     id = oracle_factory_contract.functions.ids(oracle_address).call()
 
     # Retrieve oracle information for the current version
     keeper_oracle_address = oracle_contract.functions.oracles(current_oracle).call()[0]
-    keeper_oracle_contract = web3.eth.contract(address=keeper_oracle_address, abi=keeper_oracle_abi)
+    keeper_oracle_contract = web3.eth.contract(address=keeper_oracle_address, abi=KEEPER_ORACLE_ABI)
     sub_oracle_factory_address = keeper_oracle_contract.functions.factory().call()
     
-    sub_oracle_factory = web3.eth.contract(address=sub_oracle_factory_address, abi=keeper_factory_abi)
+    sub_oracle_factory = web3.eth.contract(address=sub_oracle_factory_address, abi=KEEPER_FACTORY_ABI)
 
     # Fetch parameters and IDs concurrently
     parameter = sub_oracle_factory.functions.parameter().call()

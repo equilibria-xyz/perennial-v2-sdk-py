@@ -1,4 +1,4 @@
-keeper_factory_abi = [
+KEEPER_FACTORY_ABI = [
   {
     "inputs": [],
     "name": "FactoryNotInstanceError",

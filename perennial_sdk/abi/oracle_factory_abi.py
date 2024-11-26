@@ -1,4 +1,4 @@
-oracle_factory_abi = [
+ORACLE_FACTORY_ABI = [
   {
     "inputs": [
       {

@@ -1,4 +1,4 @@
-market_abi = [
+MARKET_ABI = [
   {
     "inputs": [
       {

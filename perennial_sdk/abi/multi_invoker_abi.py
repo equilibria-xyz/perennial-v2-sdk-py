@@ -1,4 +1,4 @@
-multi_invoker_abi = [
+MULTI_INVOKER_ABI = [
   {
     "inputs": [
       {

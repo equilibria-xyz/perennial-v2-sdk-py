@@ -1,4 +1,4 @@
-oracle_abi = [
+ORACLE_ABI = [
   {
     "inputs": [
       {
