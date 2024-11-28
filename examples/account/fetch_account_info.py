@@ -25,7 +25,7 @@ def print_account_info(market: str) -> None:
 
     open_position = account_info.fetch_open_positions(market)
     if open_position:
-        print(open_position)  # Directly print the PositionDetails object
+        print(open_position)  
     else:
         print("No open positions.")
         print('-' * 46)

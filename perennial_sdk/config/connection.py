@@ -4,9 +4,9 @@ from dotenv import load_dotenv
 from eth_account import Account
 
 load_dotenv()
-rpc_url = os.getenv('rpc_url')
-private_key = os.getenv('private_key')
-chain_id = os.getenv('chain_id')
+rpc_url = os.getenv('RPC_URL')
+private_key = os.getenv('PRIVATE_KEY')
+chain_id = os.getenv('CHAIN_ID')
 
 pyth_url = "https://hermes.pyth.network/v2/updates/price/latest"
 arbitrum_graph_url = 'https://subgraph.perennial.finance/arbitrum'
