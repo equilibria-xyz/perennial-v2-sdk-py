@@ -1,6 +1,6 @@
 from datetime import datetime
 from decimal import Decimal, getcontext
-from utils import logger
+from perennial_sdk.utils import logger
 
 
 getcontext().prec = 100  # Setting a high precision for Decimal calculations
@@ -78,16 +78,19 @@ def compute_interest_rate(curve, utilization):
 
 def calculate_funding_and_interest_for_sides(snapshot: dict) -> dict:
     try:
-        p_accumulator = snapshot["result"]["postUpdate"]["marketSnapshots"][0]['global']['pAccumulator']
-        funding_fee = snapshot["result"]["postUpdate"]["marketSnapshots"][0]['parameter']['fundingFee']
-        interest_fee = snapshot["result"]["postUpdate"]["marketSnapshots"][0]['parameter']['interestFee']
-        p_controller = snapshot["result"]["postUpdate"]["marketSnapshots"][0]['riskParameter']['pController']
-        utilization_curve = snapshot["result"]["postUpdate"]["marketSnapshots"][0]['riskParameter']['utilizationCurve']
-        efficiency_limit = snapshot["result"]["postUpdate"]["marketSnapshots"][0]['riskParameter']['efficiencyLimit']
-        maker = snapshot["result"]["postUpdate"]["marketSnapshots"][0]['nextPosition']['maker']
-        long = snapshot["result"]["postUpdate"]["marketSnapshots"][0]['nextPosition']['long']
-        short = snapshot["result"]["postUpdate"]["marketSnapshots"][0]['nextPosition']['short']
-        timestamp = snapshot["result"]["postUpdate"]["marketSnapshots"][0]['nextPosition']['timestamp']
+        post_update_snapshots = snapshot["postUpdate"]["marketSnapshots"]
+        market_snapshot = post_update_snapshots[0]
+
+        p_accumulator = market_snapshot['global']['pAccumulator']
+        funding_fee = market_snapshot['parameter']['fundingFee']
+        interest_fee = market_snapshot['parameter']['interestFee']
+        p_controller = market_snapshot['riskParameter']['pController']
+        utilization_curve = market_snapshot['riskParameter']['utilizationCurve']
+        efficiency_limit = market_snapshot['riskParameter']['efficiencyLimit']
+        maker = market_snapshot['nextPosition']['maker']
+        long = market_snapshot['nextPosition']['long']
+        short = market_snapshot['nextPosition']['short']
+        timestamp = market_snapshot['nextPosition']['timestamp']
 
         time_delta = Decimal(datetime.now().timestamp()) - timestamp
         market_funding = p_accumulator['_value'] + Big6Math.mul(time_delta, Big6Math.div(p_accumulator['_skew'], p_controller['k']))

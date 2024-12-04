@@ -5,32 +5,46 @@ class MarketInfo:
     def __init__(self):
         pass
 
-    def fetch_market_price(symbol: str, snapshot: dict = None) -> float:
+    def fetch_market_price(self, symbol: str, snapshot: dict = None) -> dict:
         try:
             if not snapshot:
                 snapshot = fetch_market_snapshot([symbol])
 
-            pre_update_market_price = float(snapshot["result"]["preUpdate"]["marketSnapshots"][0]["global"]["latestPrice"]) / BIG_6_DIVISOR
-            latest_market_price = float(snapshot["result"]["postUpdate"]["marketSnapshots"][0]["global"]["latestPrice"]) / BIG_6_DIVISOR
+            pre_update_snapshots = snapshot["preUpdate"]["marketSnapshots"]
+            post_update_snapshots = snapshot["postUpdate"]["marketSnapshots"]
+
+            pre_update_market_snapshot = next(
+                (s for s in pre_update_snapshots if get_symbol_for_market_address(s["marketAddress"]) == symbol),
+                None
+            )
+            post_update_market_snapshot = next(
+                (s for s in post_update_snapshots if get_symbol_for_market_address(s["marketAddress"]) == symbol),
+                None
+            )
+
+            if not pre_update_market_snapshot or not post_update_market_snapshot:
+                raise ValueError(f"Market snapshots for symbol {symbol} not found in pre/post updates")
+
+            pre_update_market_price = float(pre_update_market_snapshot["global"]["latestPrice"]) / BIG_6_DIVISOR
+            latest_market_price = float(post_update_market_snapshot["global"]["latestPrice"]) / BIG_6_DIVISOR
 
             return {
-                    "market": symbol.upper(),
-                    "pre_update_market_price": pre_update_market_price,
-                    "latest_market_price": latest_market_price
-                }
+                "pre_update_market_price": pre_update_market_price,
+                "latest_market_price": latest_market_price
+            }
         
         except Exception as e:
             logger.error(f'market_info.py/fetch_market_price() - Error while fetching latest market price for market {symbol}. Error: {e}', exc_info=True)
             return None
 
-    def fetch_market_funding_rate(symbol: str, snapshot: dict = None):
+    def fetch_market_funding_rate(self, symbol: str, snapshot: dict = None):
         try:
             if not snapshot:
                 snapshot = fetch_market_snapshot([symbol])
 
             raw_funding_dict = calculate_funding_and_interest_for_sides(snapshot)
-            hourly_net_rate_long = float(raw_funding_dict['long']['funding_rate_long_hourly']) - (raw_funding_dict['long']['funding_fee_long_hourly'] + raw_funding_dict['long']['interest_fee_long_hourly'])
-            hourly_net_rate_short = float(raw_funding_dict['long']['funding_rate_short_hourly']) - (raw_funding_dict['short']['funding_fee_short_hourly'] + raw_funding_dict['short']['interest_fee_short_hourly'])
+            hourly_net_rate_long = float(raw_funding_dict['long']['funding_rate_long_hourly']) - float(raw_funding_dict['long']['funding_fee_long_hourly']) + float(raw_funding_dict['long']['interest_fee_long_hourly'])
+            hourly_net_rate_short = float(raw_funding_dict['short']['funding_rate_short_hourly']) - float(raw_funding_dict['short']['funding_fee_short_hourly']) + float(raw_funding_dict['short']['interest_fee_short_hourly'])
 
             return {
                 "net_rate_long_1hr": hourly_net_rate_long,
@@ -38,10 +52,10 @@ class MarketInfo:
             }
 
         except Exception as e:
-            logger.error(f'market_info.py/fetch_market_funding_rate() - Error while fetching latest market price for market {symbol}. Error: {e}', exc_info=True)
+            logger.error(f'market_info.py/fetch_market_funding_rate() - Error while fetching funding rates for market {symbol}. Error: {e}', exc_info=True)
             return None
 
-    def fetch_margin_maintenance_info(symbol: str, snapshot: dict = None):
+    def fetch_margin_maintenance_info(self, symbol: str, snapshot: dict = None):
         try:
             if not snapshot:
                 snapshot = fetch_market_snapshot([symbol])

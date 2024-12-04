@@ -1,45 +1,50 @@
 from datetime import datetime, timezone
-from utils import logger
+from perennial_sdk.utils import logger
 from perennial_sdk.main.markets import *
-from perennial_sdk.main.markets.market_info import MarginMaintenanceInfo
+from perennial_sdk.main.markets.market_info import MarketInfo
 from perennial_sdk.constants import *
 from perennial_sdk.constants.market_contracts import *
 from web3.contract import Contract
 
 class AccountInfo:
+    def __init__(self):
+        self.local_account = os.getenv('ADDRESS')
+        self.market_reader = MarketInfo()
 
-    def __init__(self, account):
-        self.account = account
-
-    @staticmethod
-    def fetch_balance(contract: Contract, account_address: str) -> int:
+    def fetch_balance(self, contract: Contract, account_address: str = None) -> int:
         try:
+            if not account_address:
+                account_address = self.local_account
+
             return int(contract.functions.balanceOf(account_address).call() / BIG_6_DIVISOR)
         
         except Exception as e:
             logger.error(f'account_info.py/fetch_balance(); Failed to fetch balance for account address {account_address}. Error: {e}', exc_info=True)
             return None
 
-    @staticmethod
-    def fetch_usdc_balance(account_address: str) -> float:
+    def fetch_usdc_balance(self, account_address: str = None) -> float:
         try:
+            if not account_address:
+                account_address = self.local_account
+
             return float(AccountInfo.fetch_balance(USDC_CONTRACT, account_address))
         
         except Exception as e:
             logger.error(f'account_info.py/fetch_usdc_balance(); Failed to fetch USDC balance for account address {account_address}. Error: {e}', exc_info=True)
             return None
 
-    @staticmethod
-    def fetch_dsu_balance(account_address: str) -> float:
+    def fetch_dsu_balance(self, account_address: str = None) -> float:
         try:
+            if not account_address:
+                account_address = self.local_account
+
             return float(AccountInfo.fetch_balance(DSU_CONTRACT, account_address))
         
         except Exception as e:
             logger.error(f'account_info.py/fetch_dsu_balance(); Failed to fetch DSU balance for account address {account_address}. Error: {e}', exc_info=True)
             return None
 
-    @staticmethod
-    def fetch_open_positions(symbol: str, snapshot: dict = None):
+    def fetch_open_positions(self, symbol: str, snapshot: dict = None):
         try:
             if not snapshot:
                 snapshot = fetch_market_snapshot([symbol])
@@ -76,12 +81,11 @@ class AccountInfo:
             logger.error(f'account_info.py/fetch_open_positions() - Failed to fetch open positions for market {symbol}. Error: {e}', exc_info=True)
             return None
 
-    @staticmethod
-    def get_liquidation_price_for_position(symbol: str) -> float:
+    def get_liquidation_price_for_position(self, symbol: str) -> float:
         try:
-            position_details = AccountInfo.fetch_open_positions(symbol)
-            maintenance_margin = MarginMaintenanceInfo.get_maintenence_margin()
-            liquidation_price = AccountInfo.calculate_liquidation_price(
+            position_details = self.fetch_open_positions(symbol)
+            maintenance_margin = self.market_reader.fetch_margin_maintenance_info()
+            liquidation_price = self.calculate_liquidation_price(
                 position_details,
                 maintenance_margin
             )
@@ -89,11 +93,10 @@ class AccountInfo:
             return liquidation_price
         
         except Exception as e:
-            logger.error(f'account_info.py/get_liquidation_price_for_position() - Error while calculating liquidation price for position. Error: {e}', exc_info=True)
+            logger.error(f'account_info.py/get_liquidation_price_for_position() - Error while calling liquidation price for position. Error: {e}', exc_info=True)
             return None
     
-    @staticmethod
-    def calculate_liquidation_price(position_details: dict, maintenance_margin: dict) -> float:
+    def calculate_liquidation_price(self, position_details: dict, maintenance_margin: dict) -> float:
         try:
             is_long = False
             if position_details['side'] == 'LONG':
