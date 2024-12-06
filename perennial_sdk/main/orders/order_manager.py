@@ -10,47 +10,49 @@ class TxExecutor:
     def __init__(self):
         pass
         
-    def approve_usdc_to_dsu(self, collateral_amount: float) -> HexBytes:
+    def approve_usdc_to_dsu(self, collateral_amount: float) -> str:
         try:
             collateral_amount = round(Decimal(collateral_amount), 2)
             amount_usdc = int(collateral_amount * 10 ** 6)
+
+            approve_tx = USDC_CONTRACT.functions.approve(MULTI_INVOKER_ADDRESS, amount_usdc).build_transaction({
+                'from': account_address,
+                'nonce': web3.eth.get_transaction_count(account_address),
+            })
+
+            signed_approve_tx = web3.eth.account.sign_transaction(approve_tx, private_key)
+
+            estimated_gas = web3.eth.estimate_gas(approve_tx)
+            approve_tx["gas"] = estimated_gas
 
             fee_history = web3.eth.fee_history(1, "latest")
             base_fee_per_gas = fee_history["baseFeePerGas"][-1]
             max_priority_fee_per_gas = web3.eth.max_priority_fee
             max_fee_per_gas = base_fee_per_gas + max_priority_fee_per_gas
 
-            approve_tx = USDC_CONTRACT.functions.approve(MULTI_INVOKER_ADDRESS, amount_usdc).build_transaction({
-                'from': account_address,
-                'nonce': web3.eth.get_transaction_count(account_address),
-                "maxFeePerGas": max_fee_per_gas,
-                "maxPriorityFeePerGas": max_priority_fee_per_gas
-            })
+            approve_tx["maxFeePerGas"] = max_fee_per_gas
+            approve_tx["maxPriorityFeePerGas"] = max_priority_fee_per_gas
 
-            estimated_gas = web3.eth.estimate_gas(approve_tx)
-            approve_tx["gas"] = estimated_gas
-
-            signed_approve_tx = web3.eth.account.sign_transaction(approve_tx, private_key)
             signed_approve_tx_hash = web3.eth.send_raw_transaction(signed_approve_tx.raw_transaction)
             tx_receipt = web3.eth.wait_for_transaction_receipt(signed_approve_tx_hash)
 
             if tx_receipt['status'] != 1:
                 raise Exception
             else:
-                logger.info(f'order_manager.py - Price committed to MultiInvoker.')
-                return signed_approve_tx_hash
+                logger.info(f'order_manager.py - Approved USDC to DSU contract.')
+                return signed_approve_tx_hash.to_0x_hex()
         
         except Exception as e:
             logger.error(f'order_manager.py/approve_usdc_to_dsu() - Error while approving USDC to the DSU contract. Error: {e}', exc_info=True)
             return None
 
-    def commit_price_to_multi_invoker(self, market_address: str) -> HexBytes:
+    def commit_price_to_multi_invoker(self, symbol: str) -> str:
         try:
 
             oracle_data = fetch_oracle_info(
-                arbitrum_markets[market_address], market_provider_ids[market_address]
+                arbitrum_markets[symbol], market_provider_ids[symbol]
             )
-            factory_address = oracle_data['factory_address']
+            sub_oracle_factory_address = web3.to_checksum_address(oracle_data['sub_oracle_factory_address'])
             min_valid_time = oracle_data['min_valid_time']
             underlying_id = oracle_data['underlying_id']
 
@@ -65,15 +67,12 @@ class TxExecutor:
             }
 
             multi_invoker: Contract = web3.eth.contract(address=MULTI_INVOKER_ADDRESS, abi=MULTI_INVOKER_ABI)
-
-            base_fee_per_gas = web3.eth.fee_history(1, "latest")["baseFeePerGas"][-1]
-            max_priority_fee_per_gas = web3.eth.max_priority_fee
-            max_fee_per_gas = base_fee_per_gas + max_priority_fee_per_gas
-            action = 6
+            
+            action = 6 
             args_encoded = Web3().codec.encode(
                 ["address", "uint256", "bytes32[]", "uint256", "bytes", "bool"],
                 [
-                    factory_address,
+                    sub_oracle_factory_address,
                     price_commit_action["value"],
                     price_commit_action["ids"],
                     price_commit_action["version"],
@@ -81,40 +80,44 @@ class TxExecutor:
                     True  # revertOnFailure
                 ],
             )
+
             transaction = multi_invoker.functions.invoke(
                 account_address,
                 [
                     {
-                        "action": action,  
-                        "args": args_encoded 
+                        "action": action,  # PerennialAction.COMMIT_PRICE
+                        "args": args_encoded  # Encoded arguments for the action
                     }
                 ]
             ).build_transaction({
                 "from": account_address,
                 "nonce": web3.eth.get_transaction_count(account_address),
-                "value": 1,
-                "maxFeePerGas": max_fee_per_gas,
-                "maxPriorityFeePerGas": max_priority_fee_per_gas
+                "value": 1
             })
 
             estimated_gas = web3.eth.estimate_gas(transaction)
+            print(estimated_gas)
             transaction["gas"] = estimated_gas
+            base_fee_per_gas = web3.eth.fee_history(1, "latest")["baseFeePerGas"][-1]
+            max_priority_fee_per_gas = web3.eth.max_priority_fee
+            max_fee_per_gas = base_fee_per_gas + max_priority_fee_per_gas
+            transaction["maxFeePerGas"] = max_fee_per_gas
 
-            signed_txn = web3.eth.account.sign_transaction(transaction, private_key=private_key)
-            tx_hash_commit = web3.eth.send_raw_transaction(signed_txn.raw_transaction)
+            signed_tx = web3.eth.account.sign_transaction(transaction, private_key=private_key)
+            tx_hash_commit = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
             tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash_commit)
 
             if tx_receipt['status'] != 1:
                 raise Exception
             else:
                 logger.info(f'order_manager.py - Price committed to MultiInvoker.')
-                return tx_hash_commit
+                return tx_hash_commit.to_0x_hex()
         
         except Exception as e:
             logger.error(f'order_manager.py/commit_price_to_multi_invoker() - Error while commiting price to multi invoker contract. Error: {e}', exc_info=True)
             return None
 
-    def close_position_in_market(self, market_address: str) -> HexBytes:
+    def close_position_in_market(self, market_address: str) -> str:
         try:
             update_position_action = [
                 arbitrum_markets[market_address],  # IMarket (Market address)
@@ -166,21 +169,21 @@ class TxExecutor:
                 raise Exception
             else:
                 logger.info(f'order_manager.py - Position successfully closed in market {market_address}.')
-                return tx_hash_update
+                return tx_hash_update.to_0x_hex()
 
         except Exception as e:
             logger.error(f'order_manager.py/close_position_in_market() - Error while closing position in market {market_address}. Error: {e}', exc_info=True)
             return None
 
-    def withdraw_collateral(self, market_address: str, snapshot: dict = None) -> HexBytes:
+    def withdraw_collateral(self, symbol: str, snapshot: dict = None) -> str:
         try:
             if not snapshot:
-                snapshot = fetch_market_snapshot([market_address])
+                snapshot = fetch_market_snapshot([symbol])
             
             post_update_collateral = snapshot["result"]["postUpdate"]["marketAccountSnapshots"][0]["local"]["collateral"]
 
             update_position_action = [
-                arbitrum_markets[market_address],  # IMarket (Market address)
+                arbitrum_markets[symbol],  # IMarket (Market address)
                 0,  # newMaker (UFixed6)
                 0,  # newLong (UFixed6)
                 0,  # newShort (UFixed6)
@@ -189,11 +192,6 @@ class TxExecutor:
                 (0, "0x0000000000000000000000000000000000000000", False),  # interfaceFee1 (amount, receiver, unwrap)
                 (0, "0x0000000000000000000000000000000000000000", False)  # interfaceFee2 (amount, receiver, unwrap)
             ]
-
-            fee_history = web3.eth.fee_history(1, "latest")
-            base_fee_per_gas = fee_history["baseFeePerGas"][-1]
-            max_priority_fee_per_gas = web3.eth.max_priority_fee
-            max_fee_per_gas = base_fee_per_gas + max_priority_fee_per_gas
 
             encoded_args = web3.codec.encode(
                 [
@@ -214,12 +212,17 @@ class TxExecutor:
 
             withdraw_tx = MULTI_INVOKER_CONTRACT.functions.invoke(invocations).build_transaction({
                 'from': account_address,
-                'nonce': web3.eth.get_transaction_count(account_address),
-                "maxFeePerGas": max_fee_per_gas
+                'nonce': web3.eth.get_transaction_count(account_address)
             })
 
             estimated_gas = web3.eth.estimate_gas(withdraw_tx)
             withdraw_tx['gas'] = estimated_gas
+
+            fee_history = web3.eth.fee_history(1, "latest")
+            base_fee_per_gas = fee_history["baseFeePerGas"][-1]
+            max_priority_fee_per_gas = web3.eth.max_priority_fee
+            max_fee_per_gas = base_fee_per_gas + max_priority_fee_per_gas
+            withdraw_tx["maxFeePerGas"] = max_fee_per_gas
 
             signed_withdraw_tx = web3.eth.account.sign_transaction(withdraw_tx, private_key=private_key)
             tx_hash_withdraw = web3.eth.send_raw_transaction(signed_withdraw_tx.raw_transaction)
@@ -228,19 +231,19 @@ class TxExecutor:
             if tx_receipt['status'] != 1:
                 raise Exception
             else:
-                logger.info(f'order_manager.py - Position successfully closed in market {market_address}.')
-                return tx_hash_withdraw
+                logger.info(f'order_manager.py - Collateral withdrawn successfully from market: {symbol}.')
+                return tx_hash_withdraw.to_0x_hex()
         
         except Exception as e:
             logger.error(f'order_manager.py/withdraw_collateral() - Error while withdrawing collateral. Error: {e}', exc_info=True)
             return None
 
-    def deposit_collateral(self, market_address: str, collateral_amount: float) -> HexBytes:
+    def deposit_collateral(self, symbol: str, collateral_amount: float) -> str:
         try:
             amount_usdc = int(collateral_amount * 10 ** 6)
 
             deposit_collateral_action = [
-                arbitrum_markets[market_address],  # IMarket (Market address)
+                arbitrum_markets[symbol],  # IMarket (Market address)
                 0,  # newMaker (UFixed6)
                 0,  # newLong (UFixed6)
                 0,  # newShort (UFixed6)
@@ -290,7 +293,7 @@ class TxExecutor:
                 raise Exception
             else:
                 logger.info(f'order_manager.py - Deposited collateral: {collateral_amount} USD.')
-                return tx_hash_deposit
+                return tx_hash_deposit.to_0x_hex()
 
         except Exception as e:
             logger.error(f'order_manager.py/deposit_collateral() - Error while depositing collateral. Error: {e}', exc_info=True)
@@ -298,16 +301,16 @@ class TxExecutor:
 
     def place_market_order(
         self,
-        market_address: str, 
+        symbol: str, 
         long_amount: float, 
         short_amount: float, 
         maker_amount: float, 
         collateral_amount: float
-        ) -> HexBytes:
+        ) -> str:
 
         try:
             place_market_order_action = [
-                arbitrum_markets[market_address],  # IMarket (Market address)
+                arbitrum_markets[symbol],  # IMarket (Market address)
                 maker_amount * 1000000,  # newMaker (UFixed6)
                 long_amount * 1000000,  # newLong (UFixed6)
                 short_amount * 1000000,  # newShort (UFixed6)
@@ -316,11 +319,6 @@ class TxExecutor:
                 (0, "0x0000000000000000000000000000000000000000", False),  # interfaceFee1 (amount, receiver, unwrap)
                 (0, "0x0000000000000000000000000000000000000000", False)  # interfaceFee2 (amount, receiver, unwrap)
             ]
-
-            fee_history = web3.eth.fee_history(1, "latest")
-            base_fee_per_gas = fee_history["baseFeePerGas"][-1]
-            max_priority_fee_per_gas = web3.eth.max_priority_fee
-            max_fee_per_gas = base_fee_per_gas + max_priority_fee_per_gas
 
             encoded_args = web3.codec.encode(
                 [
@@ -339,30 +337,35 @@ class TxExecutor:
             invocation_tuple = (1, encoded_args)  # 1 is for UPDATE_POSITION
             invocations = [invocation_tuple]
 
-            update_tx = MULTI_INVOKER_CONTRACT.functions.invoke(invocations).build_transaction({
+            market_order_tx = MULTI_INVOKER_CONTRACT.functions.invoke(invocations).build_transaction({
                 'from': account_address,
                 'nonce': web3.eth.get_transaction_count(account_address),
-                "maxFeePerGas": max_fee_per_gas
             })
 
-            estimated_gas = web3.eth.estimate_gas(update_tx)
-            update_tx['gas'] = estimated_gas
+            estimated_gas = web3.eth.estimate_gas(market_order_tx)
+            market_order_tx['gas'] = estimated_gas
 
-            signed_place_market_order_tx = web3.eth.account.sign_transaction(update_tx, private_key=private_key)
+            fee_history = web3.eth.fee_history(1, "latest")
+            base_fee_per_gas = fee_history["baseFeePerGas"][-1]
+            max_priority_fee_per_gas = web3.eth.max_priority_fee
+            max_fee_per_gas = base_fee_per_gas + max_priority_fee_per_gas
+            market_order_tx["maxFeePerGas"] = max_fee_per_gas
+
+            signed_place_market_order_tx = web3.eth.account.sign_transaction(market_order_tx, private_key=private_key)
             tx_hash_place_market_order = web3.eth.send_raw_transaction(signed_place_market_order_tx.raw_transaction)
             tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash_place_market_order)
 
             if tx_receipt['status'] != 1:
                 raise Exception
             else:
-                logger.info(f'order_manager.py - Deposited collateral: {collateral_amount} USD.')
-                return tx_hash_place_market_order
+                logger.info(f'order_manager.py - Market order executed on market: {symbol}.')
+                return tx_hash_place_market_order.to_0x_hex()
         
         except Exception as e:
-            logger.error(f'order_manager.py/place_market_order() - Error while placing market order for market address {market_address}. Error: {e}', exc_info=True)
+            logger.error(f'order_manager.py/place_market_order() - Error while placing market order for market: {symbol}. Error: {e}', exc_info=True)
             return None
 
-    def place_limit_order(self, market_address: str, side: int, price: float, delta: float) -> HexBytes:
+    def place_limit_order(self, market_address: str, side: int, price: float, delta: float) -> str:
         try:
             global comparison
             if side==1: comparison=-1
@@ -419,13 +422,13 @@ class TxExecutor:
                 raise Exception
             else:
                 logger.info(f'order_manager.py - Placed limit order on market address {market_address}.')
-                return tx_hash_place_limit_order
+                return tx_hash_place_limit_order.to_0x_hex()
         
         except Exception as e:
             logger.error(f'order_manager.py/place_limit_order() - Error while placing limit order for market {market_address}. Error: {e}', exc_info=True)
             return None
 
-    def cancel_order(self, market_address: str, nonce: int) -> HexBytes:
+    def cancel_order(self, market_address: str, nonce: int) -> str:
         try:
             cancel_order_action = [arbitrum_markets[market_address], nonce]
             cancel_args = web3.codec.encode([
@@ -438,21 +441,21 @@ class TxExecutor:
 
             cancel_invocations = [cancel_invocation_tuple]
 
+            cancel_order_tx = MULTI_INVOKER_CONTRACT.functions.invoke(cancel_invocations).build_transaction({
+                'from': account_address,
+                'nonce': web3.eth.get_transaction_count(account_address)
+            })
+
+            signed_cancel_order_tx = web3.eth.account.sign_transaction(cancel_order_tx, private_key=private_key)
+            estimated_gas = web3.eth.estimate_gas(cancel_order_tx)
+            cancel_order_tx['gas'] = estimated_gas
+
             fee_history = web3.eth.fee_history(1, "latest")
             base_fee_per_gas = fee_history["baseFeePerGas"][-1]
             max_priority_fee_per_gas = web3.eth.max_priority_fee
             max_fee_per_gas = base_fee_per_gas + max_priority_fee_per_gas
+            cancel_order_tx["maxFeePerGas"] = max_fee_per_gas
 
-            cancel_order_tx = MULTI_INVOKER_CONTRACT.functions.invoke(cancel_invocations).build_transaction({
-                'from': account_address,
-                'nonce': web3.eth.get_transaction_count(account_address),
-                "maxFeePerGas": max_fee_per_gas
-            })
-
-            estimated_gas = web3.eth.estimate_gas(cancel_order_tx)
-            cancel_order_tx['gas'] = estimated_gas
-
-            signed_cancel_order_tx = web3.eth.account.sign_transaction(cancel_order_tx, private_key=private_key)
             tx_hash_cancel_order = web3.eth.send_raw_transaction(signed_cancel_order_tx.raw_transaction)
             tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash_cancel_order)
 
@@ -460,13 +463,13 @@ class TxExecutor:
                 raise Exception
             else:
                 logger.info(f'order_manager.py - Canceled limit order on market address {market_address}.')
-                return tx_hash_cancel_order
+                return tx_hash_cancel_order.to_0x_hex()
         
         except Exception as e:
             logger.error(f'order_manager.py/cancel_order() - Error while cancelling order for market {market_address}. Error: {e}', exc_info=True)
             return None
 
-    def cancel_list_of_orders(self, market_address:str, nonces: list) -> HexBytes:
+    def cancel_list_of_orders(self, market_address:str, nonces: list) -> str:
         try:
             cancel_invocations = []
 
@@ -480,21 +483,23 @@ class TxExecutor:
                 cancel_invocation_tuple = (4, cancel_args)
                 cancel_invocations.append(cancel_invocation_tuple)
 
+            cancel_order_tx = MULTI_INVOKER_CONTRACT.functions.invoke(cancel_invocations).build_transaction({
+                'from': account_address,
+                'nonce': web3.eth.get_transaction_count(account_address),
+
+            })
+
+            signed_cancel_order_tx = web3.eth.account.sign_transaction(cancel_order_tx, private_key=private_key)
+
             fee_history = web3.eth.fee_history(1, "latest")
             base_fee_per_gas = fee_history["baseFeePerGas"][-1]
             max_priority_fee_per_gas = web3.eth.max_priority_fee
             max_fee_per_gas = base_fee_per_gas + max_priority_fee_per_gas
-
-            cancel_order_tx = MULTI_INVOKER_CONTRACT.functions.invoke(cancel_invocations).build_transaction({
-                'from': account_address,
-                'nonce': web3.eth.get_transaction_count(account_address),
-                "maxFeePerGas": max_fee_per_gas
-            })
+            cancel_order_tx["maxFeePerGas"] = max_fee_per_gas
 
             estimated_gas = web3.eth.estimate_gas(cancel_order_tx)
             cancel_order_tx['gas'] = estimated_gas
-
-            signed_cancel_order_tx = web3.eth.account.sign_transaction(cancel_order_tx, private_key=private_key)
+            
             tx_hash_cancel_all_orders = web3.eth.send_raw_transaction(signed_cancel_order_tx.raw_transaction)
             tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash_cancel_all_orders)
 
@@ -502,14 +507,14 @@ class TxExecutor:
                 raise Exception
             else:
                 logger.info(f'order_manager.py - Placed limit order on market address {market_address}.')
-                return tx_hash_cancel_all_orders
+                return tx_hash_cancel_all_orders.to_0x_hex()
         
         except Exception as e:
             logger.error(f'order_manager.py/cancel_list_of_orders() - Error while cancelling order for market {market_address}. Error: {e}', exc_info=True)
             return None
 
 
-    def place_stop_loss_order(self, market_address: str, side: int, price: float, delta: float):
+    def place_stop_loss_order(self, market_address: str, side: int, price: float, delta: float) -> str:
         try:
 
             global comparison
@@ -546,21 +551,23 @@ class TxExecutor:
             invocation_tuple = (3, encoded_args)  # 3 is for PLACE_ORDER
             invocations = [invocation_tuple]
 
+            stop_loss_order_tx = MULTI_INVOKER_CONTRACT.functions.invoke(invocations).build_transaction({
+                'from': account_address,
+                'nonce': web3.eth.get_transaction_count(account_address),
+            })
+
+
+            signed_stop_loss_order_tx = web3.eth.account.sign_transaction(stop_loss_order_tx, private_key=private_key)
+
             fee_history = web3.eth.fee_history(1, "latest")
             base_fee_per_gas = fee_history["baseFeePerGas"][-1]
             max_priority_fee_per_gas = web3.eth.max_priority_fee
             max_fee_per_gas = base_fee_per_gas + max_priority_fee_per_gas
-
-            stop_loss_order_tx = MULTI_INVOKER_CONTRACT.functions.invoke(invocations).build_transaction({
-                'from': account_address,
-                'nonce': web3.eth.get_transaction_count(account_address),
-                "maxFeePerGas": max_fee_per_gas
-            })
+            stop_loss_order_tx["maxFeePerGas"] = max_fee_per_gas
 
             estimated_gas = web3.eth.estimate_gas(stop_loss_order_tx)
             stop_loss_order_tx['gas'] = estimated_gas
 
-            signed_stop_loss_order_tx = web3.eth.account.sign_transaction(stop_loss_order_tx, private_key=private_key)
             tx_hash_stop_loss_order = web3.eth.send_raw_transaction(signed_stop_loss_order_tx.raw_transaction)
             tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash_stop_loss_order)
 
@@ -568,13 +575,13 @@ class TxExecutor:
                 raise Exception
             else:
                 logger.info(f'order_manager.py - Placed limit order on market address {market_address}.')
-                return tx_hash_stop_loss_order
+                return tx_hash_stop_loss_order.to_0x_hex()
         
         except Exception as e:
             logger.error(f'order_manager.py/place_stop_loss_order() - Error while cancelling order for market {market_address}. Error: {e}', exc_info=True)
             return None
 
-    def place_take_profit_order(self, market_address: str, side: int, price: float, delta:float) -> HexBytes:
+    def place_take_profit_order(self, market_address: str, side: int, price: float, delta:float) -> str:
         try:
             global comparison
             if side==1: comparison=1
@@ -608,30 +615,30 @@ class TxExecutor:
             invocation_tuple = (3, encoded_args)  # 3 is for PLACE_ORDER
             invocations = [invocation_tuple]
 
+            take_profit_order_tx = MULTI_INVOKER_CONTRACT.functions.invoke(invocations).build_transaction({
+                'from': account_address,
+                'nonce': web3.eth.get_transaction_count(account_address),
+            })
+
+            take_profit_order_tx = web3.eth.account.sign_transaction(take_profit_order_tx, private_key=private_key)
+
             fee_history = web3.eth.fee_history(1, "latest")
             base_fee_per_gas = fee_history["baseFeePerGas"][-1]
             max_priority_fee_per_gas = web3.eth.max_priority_fee
             max_fee_per_gas = base_fee_per_gas + max_priority_fee_per_gas
-
-            take_profit_order_tx = MULTI_INVOKER_CONTRACT.functions.invoke(invocations).build_transaction({
-                'from': account_address,
-                'nonce': web3.eth.get_transaction_count(account_address),
-                "maxFeePerGas": max_fee_per_gas
-            })
+            take_profit_order_tx["maxFeePerGas"] = max_fee_per_gas
 
             estimated_gas = web3.eth.estimate_gas(take_profit_order_tx)
             take_profit_order_tx['gas'] = estimated_gas
 
-
-            signed_take_profit_order_tx = web3.eth.account.sign_transaction(take_profit_order_tx, private_key=private_key)
-            tx_hash_take_profit_order = web3.eth.send_raw_transaction(signed_take_profit_order_tx.raw_transaction)
-            tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash_take_profit_order)
+            tx_hash_stop_loss_order = web3.eth.send_raw_transaction(take_profit_order_tx.raw_transaction)
+            tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash_stop_loss_order)
 
             if tx_receipt['status'] != 1:
                 raise Exception
             else:
                 logger.info(f'order_manager.py - Placed take profit order on market address {market_address}.')
-                return tx_hash_take_profit_order
+                return tx_hash_stop_loss_order.to_0x_hex()
         
         except Exception as e:
             logger.error(f'order_manager.py/place_take_profit_order() - Error while placing take profit order for market {market_address}. Error: {e}', exc_info=True)

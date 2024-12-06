@@ -123,16 +123,16 @@ def fetch_oracle_info(market_address: str, provider_id: str) -> dict:
 
         return {
             **riskParameter,
-            "oracleName": oracle_name,
-            "oracleFactoryAddress": oracle_factory_address,
-            "oracleAddress": oracle_address,
-            "subOracleFactoryAddress": sub_oracle_factory_address,
-            "subOracleAddress": sub_oracle_factory_address,
-            "subOracleFactoryType": sub_oracle_factory_type,
-            "underlyingId": underlying_id,
-            "minValidTime": int(parameter[4]),
-            "commitmentGasOracle": commitment_gas_oracle,
-            "settlementGasOracle": settlement_gas_oracle,
+            "oracle_name": oracle_name,
+            "factory_address": oracle_factory_address,
+            "oracle_address": oracle_address,
+            "sub_oracle_factory_address": sub_oracle_factory_address,
+            "sub_oracle_address": sub_oracle_factory_address,
+            "sub_oracle_factory_type": sub_oracle_factory_type,
+            "underlying_id": underlying_id,
+            "min_valid_time": int(parameter[4]),
+            "commitment_gas_oracle": commitment_gas_oracle,
+            "settlement_gas_oracle": settlement_gas_oracle,
         }
 
     except Exception as e:
@@ -156,17 +156,17 @@ def fetch_market_snapshot(markets: list) -> dict:
                 oracle_info = fetch_oracle_info(
                     arbitrum_markets[market], market_provider_ids[market]
                 )
-                vaa_data, publish_time = get_vaa(oracle_info['underlyingId'].hex(), oracle_info['minValidTime'])
+                vaa_data, publish_time = get_vaa(oracle_info['underlying_id'].hex(), oracle_info['min_valid_time'])
 
                 return {
-                    "price_commitment": {
-                        "keeperFactory": oracle_info['subOracleFactoryAddress'],
-                        "version": publish_time - oracle_info['minValidTime'],
+                    "priceCommitment": {
+                        "keeperFactory": oracle_info['sub_oracle_factory_address'],
+                        "version": publish_time - oracle_info['min_valid_time'],
                         "value": 1,
-                        "ids": [Web3.to_bytes(hexstr=oracle_info['underlyingId'].hex())],
+                        "ids": [Web3.to_bytes(hexstr=oracle_info['underlying_id'].hex())],
                         "updateData": Web3.to_bytes(hexstr='0x' + vaa_data)
                     },
-                    "market_address": arbitrum_markets[market]
+                    "marketAddress": arbitrum_markets[market]
                 }
             except Exception as e:
                 logger.error(
@@ -180,8 +180,8 @@ def fetch_market_snapshot(markets: list) -> dict:
             for future in as_completed(futures):
                 result = future.result()
                 if result:
-                    price_commitments.append(result["price_commitment"])
-                    market_addresses.append(result["market_address"])
+                    price_commitments.append(result["priceCommitment"])
+                    market_addresses.append(result["marketAddress"])
 
         calldata = lens_contract.encode_abi(
             abi_element_identifier='snapshot',
@@ -231,8 +231,6 @@ def fetch_market_snapshot(markets: list) -> dict:
         }
 
         r = requests.post(rpc_url, json=json_payload)
-        print(decode_call_data(r.json()["result"], "snapshot", lens_abi))
-
         data = r.json()["result"]
 
         return decode_call_data(data, "snapshot", lens_abi)
