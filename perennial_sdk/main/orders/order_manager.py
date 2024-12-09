@@ -10,10 +10,10 @@ class TxExecutor:
     def __init__(self):
         pass
         
-    def approve_usdc_to_dsu(self, collateral_amount: float) -> str:
+    def approve_usdc_to_multi_invoker(self, collateral_amount: float) -> str:
         try:
-            collateral_amount = round(Decimal(collateral_amount), 2)
             amount_usdc = int(collateral_amount * 10 ** 6)
+            print(f'approving {amount_usdc} USDC to multiInvoker')
 
             approve_tx = USDC_CONTRACT.functions.approve(MULTI_INVOKER_ADDRESS, amount_usdc).build_transaction({
                 'from': account_address,
@@ -95,15 +95,15 @@ class TxExecutor:
                 "value": 1
             })
 
+            signed_tx = web3.eth.account.sign_transaction(transaction, private_key=private_key)
+
             estimated_gas = web3.eth.estimate_gas(transaction)
-            print(estimated_gas)
             transaction["gas"] = estimated_gas
             base_fee_per_gas = web3.eth.fee_history(1, "latest")["baseFeePerGas"][-1]
             max_priority_fee_per_gas = web3.eth.max_priority_fee
             max_fee_per_gas = base_fee_per_gas + max_priority_fee_per_gas
             transaction["maxFeePerGas"] = max_fee_per_gas
 
-            signed_tx = web3.eth.account.sign_transaction(transaction, private_key=private_key)
             tx_hash_commit = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
             tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash_commit)
 
@@ -215,6 +215,8 @@ class TxExecutor:
                 'nonce': web3.eth.get_transaction_count(account_address)
             })
 
+            signed_withdraw_tx = web3.eth.account.sign_transaction(withdraw_tx, private_key=private_key)
+
             estimated_gas = web3.eth.estimate_gas(withdraw_tx)
             withdraw_tx['gas'] = estimated_gas
 
@@ -224,7 +226,6 @@ class TxExecutor:
             max_fee_per_gas = base_fee_per_gas + max_priority_fee_per_gas
             withdraw_tx["maxFeePerGas"] = max_fee_per_gas
 
-            signed_withdraw_tx = web3.eth.account.sign_transaction(withdraw_tx, private_key=private_key)
             tx_hash_withdraw = web3.eth.send_raw_transaction(signed_withdraw_tx.raw_transaction)
             tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash_withdraw)
 
@@ -240,7 +241,8 @@ class TxExecutor:
 
     def deposit_collateral(self, symbol: str, collateral_amount: float) -> str:
         try:
-            amount_usdc = int(collateral_amount * 10 ** 6)
+            self.approve_usdc_to_multi_invoker(collateral_amount)
+            amount_usdc = int(collateral_amount * 1000000)
 
             deposit_collateral_action = [
                 arbitrum_markets[symbol],  # IMarket (Market address)
@@ -309,16 +311,20 @@ class TxExecutor:
         ) -> str:
 
         try:
+            self.approve_usdc_to_multi_invoker(collateral_amount)
+
             place_market_order_action = [
                 arbitrum_markets[symbol],  # IMarket (Market address)
-                maker_amount * 1000000,  # newMaker (UFixed6)
-                long_amount * 1000000,  # newLong (UFixed6)
-                short_amount * 1000000,  # newShort (UFixed6)
-                collateral_amount * 1000000,  # collateral (Fixed6)
+                int(maker_amount),  # newMaker (UFixed6)
+                int(long_amount),  # newLong (UFixed6)
+                int(short_amount),  # newShort (UFixed6)
+                int(collateral_amount),  # collateral (Fixed6)
                 True,  # wrap (bool)
                 (0, "0x0000000000000000000000000000000000000000", False),  # interfaceFee1 (amount, receiver, unwrap)
                 (0, "0x0000000000000000000000000000000000000000", False)  # interfaceFee2 (amount, receiver, unwrap)
             ]
+
+            print(place_market_order_action)
 
             encoded_args = web3.codec.encode(
                 [
@@ -333,14 +339,17 @@ class TxExecutor:
                 ],
                 place_market_order_action
             )
+            print('1')
 
             invocation_tuple = (1, encoded_args)  # 1 is for UPDATE_POSITION
+            print(f'invocation_tuple: {invocation_tuple}')
             invocations = [invocation_tuple]
 
             market_order_tx = MULTI_INVOKER_CONTRACT.functions.invoke(invocations).build_transaction({
                 'from': account_address,
-                'nonce': web3.eth.get_transaction_count(account_address),
+                'nonce': web3.eth.get_transaction_count(account_address)
             })
+            print('2')
 
             estimated_gas = web3.eth.estimate_gas(market_order_tx)
             market_order_tx['gas'] = estimated_gas
@@ -354,6 +363,7 @@ class TxExecutor:
             signed_place_market_order_tx = web3.eth.account.sign_transaction(market_order_tx, private_key=private_key)
             tx_hash_place_market_order = web3.eth.send_raw_transaction(signed_place_market_order_tx.raw_transaction)
             tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash_place_market_order)
+            print(tx_receipt)
 
             if tx_receipt['status'] != 1:
                 raise Exception

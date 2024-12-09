@@ -9,9 +9,11 @@ class MarketInfo:
         try:
             if not snapshot:
                 snapshot = fetch_market_snapshot([symbol])
-
-            pre_update_snapshots = snapshot["preUpdate"]["marketSnapshots"]
-            post_update_snapshots = snapshot["postUpdate"]["marketSnapshots"]
+                pre_update_snapshots = snapshot['result']["preUpdate"]["marketSnapshots"]
+                post_update_snapshots = snapshot['result']["postUpdate"]["marketSnapshots"]
+            else:
+                pre_update_snapshots = snapshot["preUpdate"]["marketSnapshots"]
+                post_update_snapshots = snapshot["postUpdate"]["marketSnapshots"]
 
             pre_update_market_snapshot = next(
                 (s for s in pre_update_snapshots if get_symbol_for_market_address(s["marketAddress"]) == symbol),

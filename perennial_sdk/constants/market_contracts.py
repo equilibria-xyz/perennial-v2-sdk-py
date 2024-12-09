@@ -1,5 +1,5 @@
 from perennial_sdk.config.connection import *
-from perennial_sdk.constants import *
+from perennial_sdk.constants.contract_addresses import *
 from perennial_sdk.abi import *
 from web3.contract import Contract
 

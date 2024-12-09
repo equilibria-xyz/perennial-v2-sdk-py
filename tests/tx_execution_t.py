@@ -4,6 +4,7 @@ from perennial_sdk.utils import *
 from perennial_sdk.main.markets.snapshot_and_oracle_info import *
 from tests.test_utils import time_function_call
 from hexbytes import HexBytes
+from perennial_sdk.utils.global_utils import *
 
 class TxExecutionTester:
     def __init__(self):
@@ -61,7 +62,7 @@ class TxExecutionTester:
         try:
             tx_hash = self.client.tx_executor.deposit_collateral(
                 'eth',
-                10
+                100
             )
 
             if not isinstance(tx_hash, str):
@@ -106,11 +107,15 @@ class TxExecutionTester:
     
     def test_market_order(self) -> bool:
         try:
+            
+            price = float(self.client.market_info.fetch_market_price('eth')['latest_market_price'])
+            amount_in_asset = 99 / price
+
             symbol = 'eth'
             long_amount = 0
-            short_amount = 100
+            short_amount = amount_in_asset
             maker_amount = 0
-            collateral_amount = 10
+            collateral_amount = 99
 
             tx_hash = self.client.tx_executor.place_market_order(
                 symbol,
@@ -130,7 +135,11 @@ class TxExecutionTester:
 
 
 x = TxExecutionTester()
+x.test_commit_price_to_multi_invoker()
+x.test_deposit_collateral()
+time.sleep(2)
 y = x.test_market_order()
+# y = x.test_withdraw_collateral()
 print(y)
 
             
