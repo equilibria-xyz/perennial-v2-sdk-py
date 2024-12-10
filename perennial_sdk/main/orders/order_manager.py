@@ -117,10 +117,10 @@ class TxExecutor:
             logger.error(f'order_manager.py/commit_price_to_multi_invoker() - Error while commiting price to multi invoker contract. Error: {e}', exc_info=True)
             return None
 
-    def close_position_in_market(self, market_address: str) -> str:
+    def close_position_in_market(self, symbol: str) -> str:
         try:
             update_position_action = [
-                arbitrum_markets[market_address],  # IMarket (Market address)
+                arbitrum_markets[symbol],  # IMarket (Market address)
                 0,  # newMaker (UFixed6)
                 0,  # newLong (UFixed6)
                 0,  # newShort (UFixed6)
@@ -168,11 +168,11 @@ class TxExecutor:
             if tx_receipt['status'] != 1:
                 raise Exception
             else:
-                logger.info(f'order_manager.py - Position successfully closed in market {market_address}.')
+                logger.info(f'order_manager.py - Position successfully closed in market {symbol}.')
                 return tx_hash_update.to_0x_hex()
 
         except Exception as e:
-            logger.error(f'order_manager.py/close_position_in_market() - Error while closing position in market {market_address}. Error: {e}', exc_info=True)
+            logger.error(f'order_manager.py/close_position_in_market() - Error while closing position in market {symbol}. Error: {e}', exc_info=True)
             return None
 
     def withdraw_collateral(self, symbol: str, snapshot: dict = None) -> str:
@@ -315,16 +315,14 @@ class TxExecutor:
 
             place_market_order_action = [
                 arbitrum_markets[symbol],  # IMarket (Market address)
-                int(maker_amount),  # newMaker (UFixed6)
-                int(long_amount),  # newLong (UFixed6)
-                int(short_amount),  # newShort (UFixed6)
-                int(collateral_amount),  # collateral (Fixed6)
+                int(maker_amount*1e6),  # newMaker (UFixed6)
+                int(long_amount*1e6),  # newLong (UFixed6)
+                int(short_amount*1e6),  # newShort (UFixed6)
+                int(collateral_amount*1e6),  # collateral (Fixed6)
                 True,  # wrap (bool)
                 (0, "0x0000000000000000000000000000000000000000", False),  # interfaceFee1 (amount, receiver, unwrap)
                 (0, "0x0000000000000000000000000000000000000000", False)  # interfaceFee2 (amount, receiver, unwrap)
             ]
-
-            print(place_market_order_action)
 
             encoded_args = web3.codec.encode(
                 [
@@ -339,17 +337,14 @@ class TxExecutor:
                 ],
                 place_market_order_action
             )
-            print('1')
 
             invocation_tuple = (1, encoded_args)  # 1 is for UPDATE_POSITION
-            print(f'invocation_tuple: {invocation_tuple}')
             invocations = [invocation_tuple]
 
             market_order_tx = MULTI_INVOKER_CONTRACT.functions.invoke(invocations).build_transaction({
                 'from': account_address,
                 'nonce': web3.eth.get_transaction_count(account_address)
             })
-            print('2')
 
             estimated_gas = web3.eth.estimate_gas(market_order_tx)
             market_order_tx['gas'] = estimated_gas
@@ -363,7 +358,6 @@ class TxExecutor:
             signed_place_market_order_tx = web3.eth.account.sign_transaction(market_order_tx, private_key=private_key)
             tx_hash_place_market_order = web3.eth.send_raw_transaction(signed_place_market_order_tx.raw_transaction)
             tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash_place_market_order)
-            print(tx_receipt)
 
             if tx_receipt['status'] != 1:
                 raise Exception

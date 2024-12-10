@@ -44,7 +44,7 @@ class TxExecutionTester:
     
     def test_commit_price_to_multi_invoker(
             self,
-            symbol: str = 'eth'
+            symbol: str
         ) -> bool:
         try:
             tx_hash = self.client.tx_executor.commit_price_to_multi_invoker(symbol)
@@ -107,15 +107,14 @@ class TxExecutionTester:
     
     def test_market_order(self) -> bool:
         try:
-            
             price = float(self.client.market_info.fetch_market_price('eth')['latest_market_price'])
-            amount_in_asset = 99 / price
+            amount_in_asset = price / 100
 
             symbol = 'eth'
             long_amount = 0
             short_amount = amount_in_asset
             maker_amount = 0
-            collateral_amount = 99
+            collateral_amount = 100
 
             tx_hash = self.client.tx_executor.place_market_order(
                 symbol,
@@ -128,6 +127,22 @@ class TxExecutionTester:
             if not isinstance(tx_hash, str):
                 logger.error(f'tx_execution_t.py/test_market_order() - Failed to place market order.')
                 return None
+            else:
+                return True
+
+        except Exception as e:
+            logger.error(f'tx_execution_t.py/test_market_order() - Error while withdrawing collateral. Error: {e}', exc_info=True)
+            return None
+    
+    def test_close_position(self) -> bool:
+        try:
+            tx_hash = self.client.tx_executor.close_position_in_market('eth')
+
+            if not isinstance(tx_hash, str):
+                logger.error(f'tx_execution_t.py/test_market_order() - Failed to place market order.')
+                return None
+            else: 
+                return True
 
         except Exception as e:
             logger.error(f'tx_execution_t.py/test_market_order() - Error while withdrawing collateral. Error: {e}', exc_info=True)
@@ -135,11 +150,11 @@ class TxExecutionTester:
 
 
 x = TxExecutionTester()
-x.test_commit_price_to_multi_invoker()
-x.test_deposit_collateral()
-time.sleep(2)
-y = x.test_market_order()
+x.test_commit_price_to_multi_invoker('eth')
+# x.test_deposit_collateral()
+# time.sleep(2)
+# y = x.test_close_position()
 # y = x.test_withdraw_collateral()
-print(y)
+# print(y)
 
             

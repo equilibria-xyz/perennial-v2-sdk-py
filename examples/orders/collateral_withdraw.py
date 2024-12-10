@@ -1,9 +1,11 @@
 from perennial_sdk.config import *
-from perennial_sdk.main.orders.order_manager import withdraw_collateral
+from examples.example_utils import CLIENT
 
-# Choose market.
-market_address = 'bnb'
-
-# Withdraw remaining collateral.
-tx_hash_withdraw = withdraw_collateral(market_address)
-print(f"Withdraw collateral transaction Hash: {tx_hash_withdraw.hex()}")
+def deposit_collateral(symbol: str):
+    try:
+        tx_hash_withdraw = CLIENT.tx_executor.withdraw_collateral(symbol)
+        print(f"Withdraw collateral transaction Hash: {tx_hash_withdraw.hex()}")
+    
+    except Exception as e:
+        print(f'Error encountered while depositing collateral to market {symbol}, Error: {e}')
+        return None

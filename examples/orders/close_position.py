@@ -1,21 +1,22 @@
 from perennial_sdk.config import *
 import time
-from perennial_sdk.main.orders.order_manager import close_position_in_market, commit_price_to_multi_invoker, withdraw_collateral
+from examples.example_utils import CLIENT
 
 
-#Choose market.
-market_address = 'link'
+def close_position_in_market(symbol: str):
+    try:
 
-# Commit price for position closing.
-tx_hash_commit = commit_price_to_multi_invoker(market_address)
-print(f"Commit price transaction Hash: 0x{tx_hash_commit.hex()}")
+        tx_hash_commit = CLIENT.tx_executor.commit_price_to_multi_invoker(symbol)
+        print(f"Commit price transaction Hash: 0x{tx_hash_commit.hex()}")
 
-# Close the position.
-tx_hash_update = close_position_in_market(market_address)
-print(f"Close position transaction Hash: {tx_hash_update.hex()}")
+        tx_hash_update = CLIENT.tx_executor.close_position_in_market(symbol)
+        print(f"Close position transaction Hash: {tx_hash_update.hex()}")
 
-time.sleep(10)
+        time.sleep(5)
 
-# Withdraw remaining collateral if needed.
-tx_hash_withdraw = withdraw_collateral(market_address)
-print(f"Withdraw collateral transaction Hash: {tx_hash_withdraw.hex()}")
+        tx_hash_withdraw = CLIENT.tx_executor.withdraw_collateral(symbol)
+        print(f"Withdraw collateral transaction Hash: {tx_hash_withdraw.hex()}")
+    
+    except Exception as e:
+        print(f'Error encountered while closing position in market {symbol}, Error: {e}')
+        return None

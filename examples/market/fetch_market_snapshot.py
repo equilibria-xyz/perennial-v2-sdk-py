@@ -1,9 +1,7 @@
 from perennial_sdk.main.markets.snapshot_and_oracle_info import *
 from perennial_sdk.config import *
 
-# Choose market address:
-market_address = 'bnb'
+SYMBOL = 'eth'
 
-# Prints the snapshot unformatted.
-snapshot = fetch_market_snapshot([market_address])
+snapshot = fetch_market_snapshot([SYMBOL])
 print(snapshot)

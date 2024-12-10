@@ -1,23 +1,30 @@
 from perennial_sdk.config import *
-from perennial_sdk.main.graph_queries.order_fetcher import fetch_latest_order_nonce
-from perennial_sdk.main.orders.order_manager import commit_price_to_multi_invoker, approve_usdc_to_dsu, place_market_order
 import time
+from examples.example_utils import CLIENT
 
-# Step 1: Set up the necessary parameters
-market_address = 'link'
-collateral_amount = 65   # Min 62.5$
-long_amount = 1
-short_amount = 0
-maker_amount = 0
+def close_position_in_market(symbol: str):
+    try:
+        collateral_amount = 85   # example value, above min collateral value
+        long_amount = 1
+        short_amount = 0
+        maker_amount = 0
 
-# Step 2: Approve USDC spending if collateral is being used and deposit it.
-signed_approve_tx_hash = approve_usdc_to_dsu(collateral_amount)
-print(f'\nApprove USDC transaction hash:{signed_approve_tx_hash.hex()}')
+        signed_approve_tx_hash = CLIENT.tx_executor.approve_usdc_to_multi_invoker(collateral_amount)
+        print(f'Approve USDC tx hash: {signed_approve_tx_hash}')
 
-# Step 3: Commit the price to the MultiInvoker contract
-tx_hash_commit = commit_price_to_multi_invoker(market_address)
-print(f"Commit price transaction Hash: 0x{tx_hash_commit.hex()}")
+        tx_hash_commit = CLIENT.tx_executor.commit_price_to_multi_invoker(symbol)
+        print(f"Commit price tx hash: {tx_hash_commit}")
 
-# Step 4: Place a market order
-tx_hash_place_market_order = place_market_order(market_address, long_amount, short_amount, maker_amount, collateral_amount)
-print(f'Open position transaction hash: {tx_hash_place_market_order.hex()}')
+        tx_hash_update = CLIENT.tx_executor.place_market_order(
+            symbol,
+            long_amount,
+            short_amount,
+            maker_amount,
+            collateral_amount
+            )
+        print(f"Place market order tx hash: {tx_hash_update}")
+    
+    except Exception as e:
+        print(f'Error encountered while placing market order in market {symbol}, Error: {e}')
+        return None
+

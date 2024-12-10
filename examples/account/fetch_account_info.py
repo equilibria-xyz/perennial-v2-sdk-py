@@ -1,34 +1,22 @@
-from perennial_sdk.main.account.account_info import AccountInfo
 from perennial_sdk.config import *
+from examples.example_utils import CLIENT
 
+SYMBOL = "eth"
 
-market_address = "link"  # Choose market
+def get_account_info(symbol: str) -> dict:
+    try:
 
+        usdc_balance = CLIENT.account_info.fetch_usdc_balance(account_address)
+        dsu_balance = CLIENT.account_info.fetch_dsu_balance(account_address)
 
-def print_account_info(market: str) -> None:
-    """Fetch and display account information.
-    Including
-        - USDC balance
-        - DSU balances
-        - Open position details in the chosen market"""
+        account_info = {
+            'usdc_balance': usdc_balance,
+            'dsu_balance': dsu_balance
+        }
 
-    account_info = AccountInfo(account)  # Create an instance of AccountInfo
+        return account_info
 
-    usdc_balance = account_info.fetch_usdc_balance(account_address)
-    dsu_balance = account_info.fetch_dsu_balance(account_address)
+    except Exception as e:
+        print(f'Error encountered while calling account info for market {symbol}, Error: {e}')
+        return None
 
-    print('-' * 46)
-    print(f'USDC balance: {usdc_balance:.2f}')
-    print('-' * 46)
-    print(f'DSU balance: {dsu_balance:.2f}')
-    print('-' * 46)
-
-    open_position = account_info.fetch_open_positions(market)
-    if open_position:
-        print(open_position)  
-    else:
-        print("No open positions.")
-        print('-' * 46)
-
-if __name__ == "__main__":
-    print_account_info(market_address)
