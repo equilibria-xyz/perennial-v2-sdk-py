@@ -7,24 +7,35 @@ from tests.test_utils import time_function_call
 class MarketInfoTester:
     def __init__(self):
         self.client = PerennialSDK()
-        self.snapshots = self.get_all_snapshots()
+        self.snapshots = self.client.market_info.get_all_snapshots()
     
     @time_function_call
     def run_all_market_tests(self):
         try:
-            success_1 = self.test_price_caller()
-            success_2 = self.test_funding_rates()
+            test_results = {
+                "test_price_caller": self.test_price_caller(),
+                "test_funding_rates": self.test_funding_rates(),
+                "get_all_snapshots": self.test_get_all_snapshots()
+            }
 
-            if success_1 and success_2:
-                logger.info(f'market_info_t/run_all_market_tests() - All tests passed')
+            total_tests = len(test_results)
+            passed_tests = [name for name, result in test_results.items() if result]
+            failed_tests = [name for name, result in test_results.items() if not result]
+            pass_percentage = (len(passed_tests) / total_tests) * 100
+
+            if len(failed_tests) == 0:
+                logger.info(f"market_info_t/run_all_market_tests() - All tests passed. Pass percentage: {pass_percentage:.2f}%")
                 return True
             else:
-                logger.error(f'market_info_t/run_all_market_tests() - Tests failed. Please debug')
+                logger.error(
+                    f"market_info_t/run_all_market_tests() - {len(failed_tests)} tests failed. "
+                    f"Failed tests: {', '.join(failed_tests)}. Pass percentage: {pass_percentage:.2f}%"
+                )
                 return False
-        
+
         except Exception as e:
-                logger.error(f'market_info_t/run_all_market_tests() - Error while running market tests. Error: {e}', exc_info=True)
-                return None
+            logger.error(f"market_info_t/run_all_market_tests() - Error while running market tests. Error: {e}", exc_info=True)
+            return None
 
     @time_function_call
     def test_price_caller(self) -> bool:
@@ -99,33 +110,42 @@ class MarketInfoTester:
             return None
     
     @time_function_call
-    def get_all_snapshots(self) -> dict:
+    def test_get_all_snapshots(self) -> bool:
         try:
-            all_markets = []
-            snapshot_dict = {}
+            snapshot_dict = self.snapshots
 
-            for market_name, market_address in arbitrum_markets.items():
-                all_markets.append(market_name)
-
-            snapshot_dict = fetch_market_snapshot(all_markets)
+            if not snapshot_dict:
+                logger.error("test_get_all_snapshots - Snapshot dictionary is empty.")
+                return False
 
             processed_snapshot_dict = {}
             for market_name, item in snapshot_dict.items():
                 try:
-                    market_snapshots = item['preUpdate']['marketSnapshots']
+                    market_snapshots = item.get('preUpdate', {}).get('marketSnapshots', [])
+                    if not market_snapshots:
+                        logger.error(f"test_get_all_snapshots - No market snapshots for market: {market_name}")
+                        return False
+
                     for snapshot in market_snapshots:
-                        market_address = snapshot['marketAddress']
+                        market_address = snapshot.get('marketAddress')
                         symbol = get_symbol_for_market_address(market_address)
                         processed_snapshot_dict[symbol] = item
 
                 except KeyError as e:
-                    logger.error(f"market_info_t - KeyError encountered while parsing snapshot: {e}", exc_info=True)
+                    logger.error(f"test_get_all_snapshots - KeyError encountered while parsing snapshot for market: {market_name}. Error: {e}", exc_info=True)
+                    return False
 
-            return processed_snapshot_dict
+            if processed_snapshot_dict:
+                logger.info("test_get_all_snapshots - All snapshots processed successfully.")
+                return True
+            else:
+                logger.error("test_get_all_snapshots - Processed snapshot dictionary is empty.")
+                return False
 
         except Exception as e:
-            logger.error(f'market_info_t - Failed to fetch funding rates. Error: {e}', exc_info=True)
-            return None
+            logger.error(f"test_get_all_snapshots - Failed to fetch or process snapshots. Error: {e}", exc_info=True)
+            return False
+    
 
 
 x = MarketInfoTester()

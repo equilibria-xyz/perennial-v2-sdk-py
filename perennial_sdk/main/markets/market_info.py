@@ -5,6 +5,34 @@ class MarketInfo:
     def __init__(self):
         pass
 
+    def get_all_snapshots(self) -> dict:
+        try:
+            all_markets = []
+            snapshot_dict = {}
+
+            for market_name, market_address in arbitrum_markets.items():
+                all_markets.append(market_name)
+
+            snapshot_dict = fetch_market_snapshot(all_markets)
+
+            processed_snapshot_dict = {}
+            for market_name, item in snapshot_dict.items():
+                try:
+                    market_snapshots = item['preUpdate']['marketSnapshots']
+                    for snapshot in market_snapshots:
+                        market_address = snapshot['marketAddress']
+                        symbol = get_symbol_for_market_address(market_address)
+                        processed_snapshot_dict[symbol] = item
+
+                except KeyError as e:
+                    logger.error(f"market_info.py - KeyError encountered while parsing snapshot: {e}", exc_info=True)
+
+            return processed_snapshot_dict
+
+        except Exception as e:
+            logger.error(f'market_info.py/get_all_snapshots - Failed to fetch funding rates. Error: {e}', exc_info=True)
+            return None
+
     def fetch_market_price(self, symbol: str, snapshot: dict = None) -> dict:
         try:
             if not snapshot:

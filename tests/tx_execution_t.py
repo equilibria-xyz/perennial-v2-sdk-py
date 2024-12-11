@@ -11,7 +11,37 @@ class TxExecutionTester:
         self.client = PerennialSDK()
         self.address = os.getenv('ADDRESS')
 
-    def test_approve_usdc_to_dsu(self) -> bool:
+    def run_all_market_tests(self):
+        try:
+            test_results = {
+                "test_approve_usdc_to_multi_invoker": self.test_approve_usdc_to_multi_invoker(),
+                "test_commit_price_to_multi_invoker": self.test_commit_price_to_multi_invoker(),
+                "test_deposit_collateral": self.test_deposit_collateral(),
+                "test_market_order": self.test_market_order(),
+                "test_close_position": self.test_close_position(),
+                "test_place_limit_order": self.test_place_limit_order(),
+            }
+
+            total_tests = len(test_results)
+            passed_tests = [name for name, result in test_results.items() if result]
+            failed_tests = [name for name, result in test_results.items() if not result]
+            pass_percentage = (len(passed_tests) / total_tests) * 100
+
+            if len(failed_tests) == 0:
+                logger.info(f"tx_execution_t.py/run_all_market_tests() - All tests passed. Pass percentage: {pass_percentage:.2f}%")
+                return True
+            else:
+                logger.error(
+                    f"tx_execution_t.py/run_all_market_tests() - {len(failed_tests)} tests failed. "
+                    f"Failed tests: {', '.join(failed_tests)}. Pass percentage: {pass_percentage:.2f}%"
+                )
+                return False
+
+        except Exception as e:
+            logger.error(f"tx_execution_t.py/run_all_market_tests() - Error while running market tests. Error: {e}", exc_info=True)
+            return None
+
+    def test_approve_usdc_to_multi_invoker(self) -> bool:
         try:
             initial_approval_amount = USDC_CONTRACT.functions.allowance(
                 self.address,
@@ -19,10 +49,8 @@ class TxExecutionTester:
                 ).call() / 1e6
             
             new_approval_amount = initial_approval_amount + 100
-            print(new_approval_amount)
 
-            tx_hash = self.client.tx_executor.approve_usdc_to_dsu(new_approval_amount)
-            print(tx_hash)
+            tx_hash = self.client.tx_executor.approve_usdc_to_multi_invoker(new_approval_amount)
             if not isinstance(tx_hash, str):
                 logger.error(f'tx_execution_t.py/test_approve_usdc_to_dsu() - Approval function did not return a transaction hash.')
                 return None
@@ -147,14 +175,29 @@ class TxExecutionTester:
         except Exception as e:
             logger.error(f'tx_execution_t.py/test_market_order() - Error while withdrawing collateral. Error: {e}', exc_info=True)
             return None
+    
+    def test_place_limit_order(self) -> bool:
+        try:
+            tx_hash = self.client.tx_executor.place_limit_order(
+                'eth',
+                1,
+                3000,
+                1
+            )
 
+            if not isinstance(tx_hash, str):
+                logger.error(f'tx_execution_t.py/test_limit_order() - Failed to place limit order.')
+                return None
+            else: 
+                return True
+
+        except Exception as e:
+            logger.error(f'tx_execution_t.py/test_limit_order() - Error while placing limit order on market ETH. Error: {e}', exc_info=True)
+            return None
+    
 
 x = TxExecutionTester()
-x.test_commit_price_to_multi_invoker('eth')
-# x.test_deposit_collateral()
-# time.sleep(2)
-# y = x.test_close_position()
-# y = x.test_withdraw_collateral()
-# print(y)
+y = x.test_place_limit_order()
+print(y)
 
             

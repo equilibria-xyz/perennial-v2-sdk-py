@@ -1,9 +1,9 @@
 import requests
 from perennial_sdk.constants import *
 from perennial_sdk.config import *
-from utils import logger
+from perennial_sdk.utils import logger
 
-class Order:
+class OrderFetcher:
     def __init__(self) -> None:
         pass
         
@@ -55,9 +55,9 @@ class Order:
                     for order in orders:
                         order_id = str(order['id'])
                         account = str(order['account'])
-                        market = f"{market_name} ({order['market']})"
                         market_address = str(order['market']).lower()
                         market_name = address_to_market_name.get(market_address, "Unknown Market")
+                        market = f"{market_name} ({order['market']})"
                         side = "Long" if order['triggerOrderSide'] == 1 else "Short"
                         trigger_price = f"{int(order['triggerOrderPrice']) / BIG_6_DIVISOR:.2f}"
                         trigger_delta = f"{int(order['triggerOrderDelta']) / 1e6:.4f}"

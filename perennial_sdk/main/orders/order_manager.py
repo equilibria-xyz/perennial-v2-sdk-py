@@ -179,8 +179,9 @@ class TxExecutor:
         try:
             if not snapshot:
                 snapshot = fetch_market_snapshot([symbol])
-            
-            post_update_collateral = snapshot["result"]["postUpdate"]["marketAccountSnapshots"][0]["local"]["collateral"]
+                post_update_collateral = snapshot["result"]["postUpdate"]["marketAccountSnapshots"][0]["local"]["collateral"]
+            else:
+                post_update_collateral = snapshot["postUpdate"]["marketAccountSnapshots"][0]["local"]["collateral"]
 
             update_position_action = [
                 arbitrum_markets[symbol],  # IMarket (Market address)
@@ -215,8 +216,6 @@ class TxExecutor:
                 'nonce': web3.eth.get_transaction_count(account_address)
             })
 
-            signed_withdraw_tx = web3.eth.account.sign_transaction(withdraw_tx, private_key=private_key)
-
             estimated_gas = web3.eth.estimate_gas(withdraw_tx)
             withdraw_tx['gas'] = estimated_gas
 
@@ -226,6 +225,7 @@ class TxExecutor:
             max_fee_per_gas = base_fee_per_gas + max_priority_fee_per_gas
             withdraw_tx["maxFeePerGas"] = max_fee_per_gas
 
+            signed_withdraw_tx = web3.eth.account.sign_transaction(withdraw_tx, private_key=private_key)
             tx_hash_withdraw = web3.eth.send_raw_transaction(signed_withdraw_tx.raw_transaction)
             tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash_withdraw)
 
@@ -369,14 +369,14 @@ class TxExecutor:
             logger.error(f'order_manager.py/place_market_order() - Error while placing market order for market: {symbol}. Error: {e}', exc_info=True)
             return None
 
-    def place_limit_order(self, market_address: str, side: int, price: float, delta: float) -> str:
+    def place_limit_order(self, symbol: str, side: int, price: float, delta: float) -> str:
         try:
             global comparison
             if side==1: comparison=-1
             elif side == 2: comparison=1
 
             place_limit_order_action = [
-                arbitrum_markets[market_address],  # IMarket (Market address)
+                arbitrum_markets[symbol],  # IMarket (Market address)
                 side,  # Side = 1 to Buy; 2 to Short
                 comparison,  # Comparison -1 if long; 1 if short.
                 20 * 1000000,  # Max fee (multiply by 1e6)
@@ -404,37 +404,39 @@ class TxExecutor:
             invocation_tuple = (3, encoded_args) 
             invocations = [invocation_tuple]
 
+            
+
+            limit_order_tx = MULTI_INVOKER_CONTRACT.functions.invoke(invocations).build_transaction({
+                'from': account_address,
+                'nonce': web3.eth.get_transaction_count(account_address)
+            })
+
+            signed_place_limit_order_tx = web3.eth.account.sign_transaction(limit_order_tx, private_key=private_key)
+
+            estimated_gas = web3.eth.estimate_gas(limit_order_tx)
+            limit_order_tx['gas'] = estimated_gas
             fee_history = web3.eth.fee_history(1, "latest")
             base_fee_per_gas = fee_history["baseFeePerGas"][-1]
             max_priority_fee_per_gas = web3.eth.max_priority_fee
             max_fee_per_gas = base_fee_per_gas + max_priority_fee_per_gas
+            limit_order_tx['maxFeePerGas'] = max_fee_per_gas
 
-            limit_order_tx = MULTI_INVOKER_CONTRACT.functions.invoke(invocations).build_transaction({
-                'from': account_address,
-                'nonce': web3.eth.get_transaction_count(account_address),
-                "maxFeePerGas": max_fee_per_gas
-            })
-
-            estimated_gas = web3.eth.estimate_gas(limit_order_tx)
-            limit_order_tx['gas'] = estimated_gas
-
-            signed_place_limit_order_tx = web3.eth.account.sign_transaction(limit_order_tx, private_key=private_key)
             tx_hash_place_limit_order = web3.eth.send_raw_transaction(signed_place_limit_order_tx.raw_transaction)
             tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash_place_limit_order)
 
             if tx_receipt['status'] != 1:
                 raise Exception
             else:
-                logger.info(f'order_manager.py - Placed limit order on market address {market_address}.')
+                logger.info(f'order_manager.py - Placed limit order on market address {symbol}.')
                 return tx_hash_place_limit_order.to_0x_hex()
         
         except Exception as e:
-            logger.error(f'order_manager.py/place_limit_order() - Error while placing limit order for market {market_address}. Error: {e}', exc_info=True)
+            logger.error(f'order_manager.py/place_limit_order() - Error while placing limit order for market {symbol}. Error: {e}', exc_info=True)
             return None
 
-    def cancel_order(self, market_address: str, nonce: int) -> str:
+    def cancel_order(self, symbol: str, nonce: int) -> str:
         try:
-            cancel_order_action = [arbitrum_markets[market_address], nonce]
+            cancel_order_action = [arbitrum_markets[symbol], nonce]
             cancel_args = web3.codec.encode([
                 "address",
                 "uint256"
@@ -450,7 +452,7 @@ class TxExecutor:
                 'nonce': web3.eth.get_transaction_count(account_address)
             })
 
-            signed_cancel_order_tx = web3.eth.account.sign_transaction(cancel_order_tx, private_key=private_key)
+            
             estimated_gas = web3.eth.estimate_gas(cancel_order_tx)
             cancel_order_tx['gas'] = estimated_gas
 
@@ -460,25 +462,26 @@ class TxExecutor:
             max_fee_per_gas = base_fee_per_gas + max_priority_fee_per_gas
             cancel_order_tx["maxFeePerGas"] = max_fee_per_gas
 
+            signed_cancel_order_tx = web3.eth.account.sign_transaction(cancel_order_tx, private_key=private_key)
             tx_hash_cancel_order = web3.eth.send_raw_transaction(signed_cancel_order_tx.raw_transaction)
             tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash_cancel_order)
 
             if tx_receipt['status'] != 1:
                 raise Exception
             else:
-                logger.info(f'order_manager.py - Canceled limit order on market address {market_address}.')
+                logger.info(f'order_manager.py - Canceled limit order on market address {symbol}.')
                 return tx_hash_cancel_order.to_0x_hex()
         
         except Exception as e:
-            logger.error(f'order_manager.py/cancel_order() - Error while cancelling order for market {market_address}. Error: {e}', exc_info=True)
+            logger.error(f'order_manager.py/cancel_order() - Error while cancelling order for market {symbol}. Error: {e}', exc_info=True)
             return None
 
-    def cancel_list_of_orders(self, market_address:str, nonces: list) -> str:
+    def cancel_list_of_orders(self, symbol: str, nonces: list) -> str:
         try:
             cancel_invocations = []
 
             for nonce in nonces:
-                cancel_order_action = [arbitrum_markets[market_address], nonce]
+                cancel_order_action = [arbitrum_markets[symbol], nonce]
                 cancel_args = web3.codec.encode([
                     "address",
                     "uint256"
@@ -493,8 +496,6 @@ class TxExecutor:
 
             })
 
-            signed_cancel_order_tx = web3.eth.account.sign_transaction(cancel_order_tx, private_key=private_key)
-
             fee_history = web3.eth.fee_history(1, "latest")
             base_fee_per_gas = fee_history["baseFeePerGas"][-1]
             max_priority_fee_per_gas = web3.eth.max_priority_fee
@@ -503,22 +504,23 @@ class TxExecutor:
 
             estimated_gas = web3.eth.estimate_gas(cancel_order_tx)
             cancel_order_tx['gas'] = estimated_gas
-            
+
+            signed_cancel_order_tx = web3.eth.account.sign_transaction(cancel_order_tx, private_key=private_key)
             tx_hash_cancel_all_orders = web3.eth.send_raw_transaction(signed_cancel_order_tx.raw_transaction)
             tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash_cancel_all_orders)
 
             if tx_receipt['status'] != 1:
                 raise Exception
             else:
-                logger.info(f'order_manager.py - Placed limit order on market address {market_address}.')
+                logger.info(f'order_manager.py - Canceled a list of orders on market address {symbol}.')
                 return tx_hash_cancel_all_orders.to_0x_hex()
         
         except Exception as e:
-            logger.error(f'order_manager.py/cancel_list_of_orders() - Error while cancelling order for market {market_address}. Error: {e}', exc_info=True)
+            logger.error(f'order_manager.py/cancel_list_of_orders() - Error while cancelling order for market {symbol}. Error: {e}', exc_info=True)
             return None
 
 
-    def place_stop_loss_order(self, market_address: str, side: int, price: float, delta: float) -> str:
+    def place_stop_loss_order(self, symbol: str, side: int, price: float, delta: float) -> str:
         try:
 
             global comparison
@@ -528,7 +530,7 @@ class TxExecutor:
                 comparison = 1
 
             place_stop_loss_action = [
-                arbitrum_markets[market_address],  # IMarket (Market address)
+                arbitrum_markets[symbol],  # IMarket (Market address)
                 side,  # Side - 1 to Buy; 2 to Short
                 comparison,  # Comparison -1 if long; 1 if short.
                 20 * 1000000,  # Max fee (multiply by 1e6)
@@ -560,8 +562,8 @@ class TxExecutor:
                 'nonce': web3.eth.get_transaction_count(account_address),
             })
 
-
-            signed_stop_loss_order_tx = web3.eth.account.sign_transaction(stop_loss_order_tx, private_key=private_key)
+            estimated_gas = web3.eth.estimate_gas(stop_loss_order_tx)
+            stop_loss_order_tx['gas'] = estimated_gas
 
             fee_history = web3.eth.fee_history(1, "latest")
             base_fee_per_gas = fee_history["baseFeePerGas"][-1]
@@ -569,30 +571,28 @@ class TxExecutor:
             max_fee_per_gas = base_fee_per_gas + max_priority_fee_per_gas
             stop_loss_order_tx["maxFeePerGas"] = max_fee_per_gas
 
-            estimated_gas = web3.eth.estimate_gas(stop_loss_order_tx)
-            stop_loss_order_tx['gas'] = estimated_gas
-
+            signed_stop_loss_order_tx = web3.eth.account.sign_transaction(stop_loss_order_tx, private_key=private_key)
             tx_hash_stop_loss_order = web3.eth.send_raw_transaction(signed_stop_loss_order_tx.raw_transaction)
             tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash_stop_loss_order)
 
             if tx_receipt['status'] != 1:
                 raise Exception
             else:
-                logger.info(f'order_manager.py - Placed limit order on market address {market_address}.')
+                logger.info(f'order_manager.py - Placed stop-loss order on market address {symbol}.')
                 return tx_hash_stop_loss_order.to_0x_hex()
         
         except Exception as e:
-            logger.error(f'order_manager.py/place_stop_loss_order() - Error while cancelling order for market {market_address}. Error: {e}', exc_info=True)
+            logger.error(f'order_manager.py/place_stop_loss_order() - Error while placing stop-loss order for market {symbol}. Error: {e}', exc_info=True)
             return None
 
-    def place_take_profit_order(self, market_address: str, side: int, price: float, delta:float) -> str:
+    def place_take_profit_order(self, symbol: str, side: int, price: float, delta:float) -> str:
         try:
             global comparison
             if side==1: comparison=1
             elif side == 2: comparison=-1
 
             place_take_profit_action = [
-                arbitrum_markets[market_address],  # IMarket (Market address)
+                arbitrum_markets[symbol],  # IMarket (Market address)
                 side,  # Side - 1 to Buy; 2 to Short
                 comparison,  # Comparison -1 if long; 1 if short.
                 20 * 1000000,  # Max fee (multiply by 1e6)
@@ -624,7 +624,8 @@ class TxExecutor:
                 'nonce': web3.eth.get_transaction_count(account_address),
             })
 
-            take_profit_order_tx = web3.eth.account.sign_transaction(take_profit_order_tx, private_key=private_key)
+            estimated_gas = web3.eth.estimate_gas(take_profit_order_tx)
+            take_profit_order_tx['gas'] = estimated_gas
 
             fee_history = web3.eth.fee_history(1, "latest")
             base_fee_per_gas = fee_history["baseFeePerGas"][-1]
@@ -632,18 +633,16 @@ class TxExecutor:
             max_fee_per_gas = base_fee_per_gas + max_priority_fee_per_gas
             take_profit_order_tx["maxFeePerGas"] = max_fee_per_gas
 
-            estimated_gas = web3.eth.estimate_gas(take_profit_order_tx)
-            take_profit_order_tx['gas'] = estimated_gas
-
+            take_profit_order_tx = web3.eth.account.sign_transaction(take_profit_order_tx, private_key=private_key)
             tx_hash_stop_loss_order = web3.eth.send_raw_transaction(take_profit_order_tx.raw_transaction)
             tx_receipt = web3.eth.wait_for_transaction_receipt(tx_hash_stop_loss_order)
 
             if tx_receipt['status'] != 1:
                 raise Exception
             else:
-                logger.info(f'order_manager.py - Placed take profit order on market address {market_address}.')
+                logger.info(f'order_manager.py - Placed take profit order on market {symbol}.')
                 return tx_hash_stop_loss_order.to_0x_hex()
         
         except Exception as e:
-            logger.error(f'order_manager.py/place_take_profit_order() - Error while placing take profit order for market {market_address}. Error: {e}', exc_info=True)
+            logger.error(f'order_manager.py/place_take_profit_order() - Error while placing take profit order for market {symbol}. Error: {e}', exc_info=True)
             return None
