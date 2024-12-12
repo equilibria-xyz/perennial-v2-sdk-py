@@ -1,7 +1,8 @@
 from perennial_sdk.config.connection import *
-from perennial_sdk.constants import *
+from perennial_sdk.constants.contract_addresses import *
 from perennial_sdk.abi import *
+from web3.contract import Contract
 
-usdc_contract = web3.eth.contract(address=usdc_address,abi=usdc_abi)
-dsu_contract = web3.eth.contract(address=dsu_address,abi=dsu_abi)
-multi_invoker_contract = web3.eth.contract(address=multi_invoker_address,abi=multi_invoker_abi)
+USDC_CONTRACT: Contract = web3.eth.contract(address=USDC_ADDRESS,abi=USDC_ABI)
+DSU_CONTRACT: Contract = web3.eth.contract(address=DSU_ADDRESS,abi=DSU_ABI)
+MULTI_INVOKER_CONTRACT: Contract = web3.eth.contract(address=MULTI_INVOKER_ADDRESS,abi=MULTI_INVOKER_ABI)

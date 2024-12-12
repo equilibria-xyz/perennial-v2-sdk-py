@@ -1,41 +1,27 @@
-from perennial_sdk.main.account.account_info import AccountInfo
+from examples.example_utils import CLIENT
 from perennial_sdk.constants import *
 
 
-def print_account_info_for_all_markets() -> None:
+def fetch_all_open_positions() -> list:
+    try:
+        open_positions = []
 
-    # List to store open positions
-    open_positions = []
+        for market_name, market_address in arbitrum_markets.items():
+            try:
+                open_position = CLIENT.account_info.fetch_open_positions(market_name)
+            except KeyError as e:
+                print(f'KeyError fetching position for market {market_name}: {e}')
+                continue
 
-    # Loop through all markets
-    for market_name, market_address in arbitrum_markets.items():
-        print(f'Checking market: {market_name.upper()} ({market_address})')
+            if open_position:
+                open_positions.append(open_position)
 
-        # Use the market name when fetching the snapshot
-        try:
-            open_position = AccountInfo.fetch_open_positions(market_name)
-        except KeyError as e:
-            print(f'Error fetching position for market {market_name}: {e}')
-            continue
-
-        if open_position:
-            open_positions.append(open_position)
-            print("Open position found! Will be printed in the end.")
-            print('----------------------------------------------')
+        if len(open_positions) > 0:
+            return open_positions
         else:
-            print(f'No open positions in {market_name.upper()}.')
-            print('----------------------------------------------')
-
-    # Print all open positions
-    if open_positions:
-        print(f'Found {len(open_positions)} open position(s):')
-        for position in open_positions:
-            print('----------------------------------------------')
-            print(position)
-    else:
-        print("No open positions in any market.")
-        print('----------------------------------------------')
-
-
-# Now call the function with the account address
-print_account_info_for_all_markets()
+            print("No open positions in any market. Returning None.")
+            return None
+    
+    except Exception as e:
+        print(f'Error encountered while fetching open positions. Error: {e}')
+        return None

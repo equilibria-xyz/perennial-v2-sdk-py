@@ -1,4 +1,4 @@
-pyth_oracle_abi = [
+PYTH_ORACLE_ABI = [
     {
         "inputs": [
             {

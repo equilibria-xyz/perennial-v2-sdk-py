@@ -1,14 +1,17 @@
 from perennial_sdk.config import *
-from perennial_sdk.main.orders.order_manager import withdraw_collateral, deposit_collateral,approve_usdc_to_dsu
+from examples.example_utils import CLIENT
 
 
-# Choose market and deposit amount.
-market_address = 'sol'
-collateral_amount = 62.5
+def deposit_collateral(
+    symbol: str,
+    collateral_amount: float
+    ):
 
-# Approve USDC spending if collateral is being used and deposit it.
-approve_usdc_to_dsu(collateral_amount)
-
-# Deposit collateral.
-tx_hash_deposit = deposit_collateral(market_address,collateral_amount)
-print(f"Withdraw collateral transaction Hash: {tx_hash_deposit.hex()}")
+    try:
+        CLIENT.tx_executor.approve_usdc_to_multi_invoker(collateral_amount)
+        tx_hash_deposit = deposit_collateral(symbol,collateral_amount)
+        print(f"Withdraw collateral transaction Hash: {tx_hash_deposit.hex()}")
+    
+    except Exception as e:
+        print(f'Error encountered while depositing collateral to market {symbol}, Error: {e}')
+        return None

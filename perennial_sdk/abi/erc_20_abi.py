@@ -1,4 +1,4 @@
-erc20_abi = [
+ERC20_ABI = [
     {
         "constant": True,
         "inputs": [],

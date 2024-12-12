@@ -1,86 +1,91 @@
 from datetime import datetime, timezone
+from perennial_sdk.utils import logger
 from perennial_sdk.main.markets import *
-from perennial_sdk.main.markets.market_info import MarginMaintenanceInfo
-
-
-class PositionDetails:
-    def __init__(self, market, side, amount, exec_price, latest_price, timestamp, pre_update_collateral,
-                 post_update_collateral):
-        self.market = market
-        self.side = side
-        self.amount = amount
-        self.exec_price = exec_price
-        self.latest_price = latest_price
-        self.timestamp = timestamp
-        self.pre_update_collateral = pre_update_collateral
-        self.post_update_collateral = post_update_collateral
-
-    def get_position_object(self):
-            return {
-                    "market": self.market,
-                    "side": self.side,
-                    "size_in_asset": self.amount,
-                    "execution_price": self.exec_price,
-                    "latest_price": self.latest_price,
-                    "opened_at": self.timestamp,
-                    "pre_update_collateral": self.pre_update_collateral,
-                    "post_update_collateral": self.post_update_collateral
-            }
-
+from perennial_sdk.main.markets.market_info import MarketInfo
+from perennial_sdk.constants import *
+from perennial_sdk.constants.market_contracts import *
+from web3.contract import Contract
 
 class AccountInfo:
+    def __init__(self):
+        self.local_account = os.getenv('ADDRESS')
+        self.market_reader = MarketInfo()
 
-    def __init__(self, account):
-        self.account = account
-
-    @staticmethod
-    def fetch_balance(contract, account_address: str, divisor=1e6):
-        return contract.functions.balanceOf(account_address).call() / divisor
-
-    @staticmethod
-    def fetch_usdc_balance(account_address: str) -> float:
-        return AccountInfo.fetch_balance(usdc_contract, account_address)
-
-    @staticmethod
-    def fetch_dsu_balance(account_address: str) -> float:
-        return AccountInfo.fetch_balance(dsu_contract, account_address)
-
-    @staticmethod
-    def fetch_open_positions(market_address: str):
-        snapshot = fetch_market_snapshot([market_address])
-        pre_update_snap = snapshot["result"]["preUpdate"]["marketAccountSnapshots"][0]
-        post_update_snap = snapshot["result"]["postUpdate"]["marketAccountSnapshots"][0]
-        position_info = post_update_snap["position"]
-
-        if position_info["maker"] == 0 and position_info["long"] == 0 and position_info["short"] == 0:
-            return None  # No open position
-
-        exec_price = pre_update_snap["prices"][0] / 1e6
-        latest_price = post_update_snap["prices"][0] / 1e6
-        trade_opened_utc = datetime.fromtimestamp(position_info["timestamp"], timezone.utc).strftime(
-            '%d-%m-%y %H:%M:%S')
-        side = 'MAKER' if position_info["maker"] != 0 else 'LONG' if position_info["long"] != 0 else 'SHORT'
-        amount = max(position_info["maker"], position_info["long"], position_info["short"]) / 1e6
-        pre_update_collateral = pre_update_snap["local"]["collateral"] / 1e6
-        post_update_collateral = post_update_snap["local"]["collateral"] / 1e6
-
-        return PositionDetails(
-            market=market_address.upper(),
-            side=side,
-            amount=amount,
-            exec_price=exec_price,
-            latest_price=latest_price,
-            timestamp=trade_opened_utc,
-            pre_update_collateral=pre_update_collateral,
-            post_update_collateral=post_update_collateral
-        ).get_position_object()
-
-    @staticmethod
-    def get_liquidation_price_for_position(market_address: str) -> float:
+    def fetch_balance(self, contract: Contract, account_address: str = None) -> int:
         try:
-            position_details = AccountInfo.fetch_open_positions(market_address)
-            maintenance_margin = MarginMaintenanceInfo.get_maintenence_margin()
-            liquidation_price = AccountInfo.calculate_liquidation_price(
+            if not account_address:
+                account_address = self.local_account
+
+            return int(contract.functions.balanceOf(account_address).call() / BIG_6_DIVISOR)
+        
+        except Exception as e:
+            logger.error(f'account_info.py/fetch_balance(); Failed to fetch balance for account address {account_address}. Error: {e}', exc_info=True)
+            return None
+
+    def fetch_usdc_balance(self, account_address: str = None) -> float:
+        try:
+            if not account_address:
+                account_address = self.local_account
+
+            return float(AccountInfo.fetch_balance(USDC_CONTRACT, account_address))
+        
+        except Exception as e:
+            logger.error(f'account_info.py/fetch_usdc_balance(); Failed to fetch USDC balance for account address {account_address}. Error: {e}', exc_info=True)
+            return None
+
+    def fetch_dsu_balance(self, account_address: str = None) -> float:
+        try:
+            if not account_address:
+                account_address = self.local_account
+
+            return float(AccountInfo.fetch_balance(DSU_CONTRACT, account_address))
+        
+        except Exception as e:
+            logger.error(f'account_info.py/fetch_dsu_balance(); Failed to fetch DSU balance for account address {account_address}. Error: {e}', exc_info=True)
+            return None
+
+    def fetch_open_positions(self, symbol: str, snapshot: dict = None):
+        try:
+            if not snapshot:
+                snapshot = fetch_market_snapshot([symbol])
+
+            pre_update_snap = snapshot["result"]["preUpdate"]["marketAccountSnapshots"][0]
+            post_update_snap = snapshot["result"]["postUpdate"]["marketAccountSnapshots"][0]
+            position_info = post_update_snap["position"]
+
+            if position_info["maker"] == 0 and position_info["long"] == 0 and position_info["short"] == 0:
+                logger.info(f'account_info.py/fetch_open_positions() - No open positions found for market {symbol}, returning None')
+                return None 
+
+            exec_price = float(pre_update_snap["prices"][0]) / BIG_6_DIVISOR
+            latest_price = float(post_update_snap["prices"][0]) / BIG_6_DIVISOR
+            trade_opened_utc = datetime.fromtimestamp(position_info["timestamp"], timezone.utc).strftime(
+                '%d-%m-%y %H:%M:%S')
+            side = 'MAKER' if position_info["maker"] != 0 else 'LONG' if position_info["long"] != 0 else 'SHORT'
+            amount = float(max(position_info["maker"], position_info["long"], position_info["short"])) / BIG_6_DIVISOR
+            pre_update_collateral = float(pre_update_snap["local"]["collateral"]) / BIG_6_DIVISOR
+            post_update_collateral = float(post_update_snap["local"]["collateral"]) / BIG_6_DIVISOR
+
+            return {
+                'market': symbol.upper(),
+                'side': side,
+                'amount': amount,
+                'exec_price': exec_price,
+                'latest_price': latest_price,
+                'timestamp': trade_opened_utc,
+                'pre_update_collateral': pre_update_collateral,
+                'post_update_collateral': post_update_collateral
+            }
+        
+        except Exception as e:
+            logger.error(f'account_info.py/fetch_open_positions() - Failed to fetch open positions for market {symbol}. Error: {e}', exc_info=True)
+            return None
+
+    def get_liquidation_price_for_position(self, symbol: str) -> float:
+        try:
+            position_details = self.fetch_open_positions(symbol)
+            maintenance_margin = self.market_reader.fetch_margin_maintenance_info()
+            liquidation_price = self.calculate_liquidation_price(
                 position_details,
                 maintenance_margin
             )
@@ -88,11 +93,10 @@ class AccountInfo:
             return liquidation_price
         
         except Exception as e:
-            print(f'Account_info.py - Error while calculating liquidation price for position. Error: {e}')
+            logger.error(f'account_info.py/get_liquidation_price_for_position() - Error while calling liquidation price for position. Error: {e}', exc_info=True)
             return None
     
-    @staticmethod
-    def calculate_liquidation_price(position_details: dict, maintenance_margin: dict) -> float:
+    def calculate_liquidation_price(self, position_details: dict, maintenance_margin: dict) -> float:
         try:
             is_long = False
             if position_details['side'] == 'LONG':
@@ -113,6 +117,6 @@ class AccountInfo:
             return liquidation_price
         
         except Exception as e:
-            print(f'Account_info.py - Error while calculating liquidation price for position. Error: {e}')
+            logger.error(f'account_info.py/calculate_liquidation_price() - Error while calculating liquidation price for position. Error: {e}', exc_info=True)
             return None
 

@@ -1,128 +1,112 @@
 from perennial_sdk.main.markets import *
 from perennial_sdk.utils.calc_funding_rate_draft_two import calculate_funding_and_interest_for_sides
 
-class MarketPriceInfo:
-    def __init__(self, market, pre_update_price, latest_price):
-        self.market = market
-        self.pre_update_price = pre_update_price
-        self.latest_price = latest_price
-
-    def get_market_prices(self) -> dict:
-        return {
-            "Market": self.market,
-            "Pre-update Market Price": self.pre_update_price,
-            "Latest Market Price": self.latest_price
-        }
-
-class MarketFundingRateInfo:
-    def __init__(self, market, funding_fee_long_annual, funding_fee_long_hourly, interest_fee_long_annual,
-                 interest_fee_long_hourly, funding_rate_long_annual, funding_rate_long_hourly,
-                 funding_fee_short_annual, funding_fee_short_hourly, interest_fee_short_annual,
-                 interest_fee_short_hourly, funding_rate_short_annual, funding_rate_short_hourly):
-        self.market = market
-        self.funding_fee_long_annual = funding_fee_long_annual
-        self.funding_fee_long_hourly = funding_fee_long_hourly
-        self.interest_fee_long_annual = interest_fee_long_annual
-        self.interest_fee_long_hourly = interest_fee_long_hourly
-        self.funding_rate_long_annual = funding_rate_long_annual
-        self.funding_rate_long_hourly = funding_rate_long_hourly
-        self.funding_fee_short_annual = funding_fee_short_annual
-        self.funding_fee_short_hourly = funding_fee_short_hourly
-        self.interest_fee_short_annual = interest_fee_short_annual
-        self.interest_fee_short_hourly = interest_fee_short_hourly
-        self.funding_rate_short_annual = funding_rate_short_annual
-        self.funding_rate_short_hourly = funding_rate_short_hourly
-
-    def get_all_rates(self) -> dict:
-       return {
-            "market": self.market,
-            "funding_fee_long_hourly": self.funding_fee_long_hourly,
-            "interest_fee_long_hourly": self.interest_fee_long_hourly,
-            "funding_rate_long_hourly": self.funding_rate_long_hourly,
-            "funding_fee_short_hourly": self.funding_fee_short_hourly,
-            "interest_fee_short_hourly": self.interest_fee_short_hourly,
-            "funding_rate_short_hourly": self.funding_rate_short_hourly,
-}
-
-
-    def get_net_rates(self) -> dict:
-        hourly_net_rate_long = self.funding_rate_long_annual - (self.funding_fee_long_hourly + self.interest_fee_long_hourly)
-        hourly_net_rate_short = self.funding_rate_short_annual - (self.funding_fee_short_hourly + self.interest_fee_short_hourly)
-        return {
-            "Market": self.market,
-            "net_rate_long_1hr": hourly_net_rate_long,
-            "net_rate_short_1hr": hourly_net_rate_short
-        }
-
-class MarginMaintenanceInfo:
-    def __init__(self, market, margin_fee, min_margin, maintenance_fee, min_maintenance):
-        self.market = market
-        self.margin_fee = margin_fee
-        self.min_margin = min_margin
-        self.maintenance_fee = maintenance_fee
-        self.min_maintenance = min_maintenance
-
-    def get_maintenence_margin(self) -> dict:
-        return {
-            "market": self.market,
-            "margin_fee": self.margin_fee,
-            "min_margin": self.min_margin,
-            "maintenance_fee": self.maintenance_fee,
-            "min_maintenance": self.min_maintenance
-        }
-
 class MarketInfo:
-    def __init__(self, market_address):
-        self.market_address = market_address
+    def __init__(self):
+        pass
 
-    @staticmethod
-    def fetch_market_price(market_address):
-        snapshot = fetch_market_snapshot([market_address])
-        pre_update_market_price = snapshot["result"]["preUpdate"]["marketSnapshots"][0]["global"]["latestPrice"] / 1e6
-        latest_market_price = snapshot["result"]["postUpdate"]["marketSnapshots"][0]["global"]["latestPrice"] / 1e6
+    def get_all_snapshots(self) -> dict:
+        try:
+            all_markets = []
+            snapshot_dict = {}
 
-        return MarketPriceInfo(market=market_address.upper(),
-                               pre_update_price=pre_update_market_price,
-                               latest_price=latest_market_price)
+            for market_name, market_address in arbitrum_markets.items():
+                all_markets.append(market_name)
 
-    @staticmethod
-    def fetch_market_funding_rate(market_address):
-        snapshot = fetch_market_snapshot([market_address])
+            snapshot_dict = fetch_market_snapshot(all_markets)
 
-        (funding_fee_long_annual, funding_fee_long_hourly, interest_fee_long_annual, interest_fee_long_hourly,
-         funding_rate_long_annual, funding_rate_long_hourly, funding_fee_short_annual, funding_fee_short_hourly,
-         interest_fee_short_annual, interest_fee_short_hourly, funding_rate_short_annual,
-         funding_rate_short_hourly) = calculate_funding_and_interest_for_sides(snapshot)
+            processed_snapshot_dict = {}
+            for market_name, item in snapshot_dict.items():
+                try:
+                    market_snapshots = item['preUpdate']['marketSnapshots']
+                    for snapshot in market_snapshots:
+                        market_address = snapshot['marketAddress']
+                        symbol = get_symbol_for_market_address(market_address)
+                        processed_snapshot_dict[symbol] = item
 
-        return MarketFundingRateInfo(
-            market=market_address.upper(),
-            funding_fee_long_annual=funding_fee_long_annual,
-            funding_fee_long_hourly=funding_fee_long_hourly,
-            interest_fee_long_annual=interest_fee_long_annual,
-            interest_fee_long_hourly=interest_fee_long_hourly,
-            funding_rate_long_annual=funding_rate_long_annual,
-            funding_rate_long_hourly=funding_rate_long_hourly,
-            funding_fee_short_annual=funding_fee_short_annual,
-            funding_fee_short_hourly=funding_fee_short_hourly,
-            interest_fee_short_annual=interest_fee_short_annual,
-            interest_fee_short_hourly=interest_fee_short_hourly,
-            funding_rate_short_annual=funding_rate_short_annual,
-            funding_rate_short_hourly=funding_rate_short_hourly
-        ).get_net_rates()
+                except KeyError as e:
+                    logger.error(f"market_info.py - KeyError encountered while parsing snapshot: {e}", exc_info=True)
 
-    @staticmethod
-    def fetch_margin_maintenance_info(market_address):
-        snapshot = fetch_market_snapshot([market_address])
+            return processed_snapshot_dict
 
-        margin_fee = snapshot["result"]["postUpdate"]["marketSnapshots"][0]["riskParameter"]["margin"] / 1e4
-        min_margin = snapshot["result"]["postUpdate"]["marketSnapshots"][0]["riskParameter"]["minMargin"] / 1e6
-        maintenance_fee = snapshot["result"]["postUpdate"]["marketSnapshots"][0]["riskParameter"]["maintenance"] / 1e4
-        min_maintenance = snapshot["result"]["postUpdate"]["marketSnapshots"][0]["riskParameter"]["minMaintenance"] / 1e6
+        except Exception as e:
+            logger.error(f'market_info.py/get_all_snapshots - Failed to fetch funding rates. Error: {e}', exc_info=True)
+            return None
 
-        return MarginMaintenanceInfo(
-            market=market_address.upper(),
-            margin_fee=margin_fee,
-            min_margin=min_margin,
-            maintenance_fee=maintenance_fee,
-            min_maintenance=min_maintenance
-        ).get_maintenence_margin()
+    def fetch_market_price(self, symbol: str, snapshot: dict = None) -> dict:
+        try:
+            if not snapshot:
+                snapshot = fetch_market_snapshot([symbol])
+                pre_update_snapshots = snapshot['result']["preUpdate"]["marketSnapshots"]
+                post_update_snapshots = snapshot['result']["postUpdate"]["marketSnapshots"]
+            else:
+                pre_update_snapshots = snapshot["preUpdate"]["marketSnapshots"]
+                post_update_snapshots = snapshot["postUpdate"]["marketSnapshots"]
+
+            pre_update_market_snapshot = next(
+                (s for s in pre_update_snapshots if get_symbol_for_market_address(s["marketAddress"]) == symbol),
+                None
+            )
+            post_update_market_snapshot = next(
+                (s for s in post_update_snapshots if get_symbol_for_market_address(s["marketAddress"]) == symbol),
+                None
+            )
+
+            if not pre_update_market_snapshot or not post_update_market_snapshot:
+                raise ValueError(f"Market snapshots for symbol {symbol} not found in pre/post updates")
+
+            pre_update_market_price = float(pre_update_market_snapshot["global"]["latestPrice"]) / BIG_6_DIVISOR
+            latest_market_price = float(post_update_market_snapshot["global"]["latestPrice"]) / BIG_6_DIVISOR
+
+            return {
+                "pre_update_market_price": pre_update_market_price,
+                "latest_market_price": latest_market_price
+            }
+        
+        except Exception as e:
+            logger.error(f'market_info.py/fetch_market_price() - Error while fetching latest market price for market {symbol}. Error: {e}', exc_info=True)
+            return None
+
+    def fetch_market_funding_rate(self, symbol: str, snapshot: dict = None):
+        try:
+            if not snapshot:
+                snapshot = fetch_market_snapshot([symbol])
+
+            raw_funding_dict = calculate_funding_and_interest_for_sides(snapshot)
+            hourly_net_rate_long = float(raw_funding_dict['long']['funding_rate_long_hourly']) - float(raw_funding_dict['long']['funding_fee_long_hourly']) + float(raw_funding_dict['long']['interest_fee_long_hourly'])
+            hourly_net_rate_short = float(raw_funding_dict['short']['funding_rate_short_hourly']) - float(raw_funding_dict['short']['funding_fee_short_hourly']) + float(raw_funding_dict['short']['interest_fee_short_hourly'])
+
+            return {
+                "net_rate_long_1hr": hourly_net_rate_long,
+                "net_rate_short_1hr": hourly_net_rate_short
+            }
+
+        except Exception as e:
+            logger.error(f'market_info.py/fetch_market_funding_rate() - Error while fetching funding rates for market {symbol}. Error: {e}', exc_info=True)
+            return None
+
+    def fetch_margin_maintenance_info(self, symbol: str, snapshot: dict = None):
+        try:
+            if not snapshot:
+                snapshot = fetch_market_snapshot([symbol])
+                margin_fee = snapshot["result"]["postUpdate"]["marketSnapshots"][0]["riskParameter"]["margin"] / 1e4
+                min_margin = snapshot["result"]["postUpdate"]["marketSnapshots"][0]["riskParameter"]["minMargin"] / BIG_6_DIVISOR
+                maintenance_fee = snapshot["result"]["postUpdate"]["marketSnapshots"][0]["riskParameter"]["maintenance"] / 1e4
+                min_maintenance = snapshot["result"]["postUpdate"]["marketSnapshots"][0]["riskParameter"]["minMaintenance"] / BIG_6_DIVISOR
+            else:
+                margin_fee = snapshot["postUpdate"]["marketSnapshots"][0]["riskParameter"]["margin"] / 1e4
+                min_margin = snapshot["postUpdate"]["marketSnapshots"][0]["riskParameter"]["minMargin"] / BIG_6_DIVISOR
+                maintenance_fee = snapshot["postUpdate"]["marketSnapshots"][0]["riskParameter"]["maintenance"] / 1e4
+                min_maintenance = snapshot["postUpdate"]["marketSnapshots"][0]["riskParameter"]["minMaintenance"] / BIG_6_DIVISOR
+
+            return {
+                "market": symbol.upper(),
+                "margin_fee": margin_fee,
+                "min_margin": min_margin,
+                "maintenance_fee": maintenance_fee,
+                "min_maintenance": min_maintenance
+            }
+        
+        except Exception as e:
+            logger.error(f'market_info.py/fetch_margin_maintenance_info() - Error while fetching latest market price for market {symbol}. Error: {e}', exc_info=True)
+            return None

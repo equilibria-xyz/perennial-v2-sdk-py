@@ -1,4 +1,4 @@
-keeper_oracle_abi = [
+KEEPER_ORACLE_ABI = [
   {
     "inputs": [
       {

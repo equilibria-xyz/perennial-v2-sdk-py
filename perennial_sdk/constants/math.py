@@ -1,0 +1,1 @@
+BIG_6_DIVISOR = 1e6

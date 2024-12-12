@@ -1,4 +1,4 @@
-emptyset_reserve_abi = [
+EMPTYSET_RESERVE_ABI = [
     {
         "inputs": [
             {
