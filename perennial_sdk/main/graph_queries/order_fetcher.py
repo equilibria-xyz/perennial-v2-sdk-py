@@ -8,7 +8,14 @@ class OrderFetcher:
         pass
         
     def fetch_trigger_orders(self) -> list:
-        """Fetch and return a list of Order objects for the given account."""
+        """
+            Fetch trigger orders for the given account.
+
+            Returns:
+                list: A list of dictionaries containing trigger order details.
+
+                None: If an error occurs or the orders cannot be fetched.
+        """
 
         try:
             headers = {

@@ -1,5 +1,3 @@
-Perennial Python SDK
-
 # Overview
 
 This tool is designed to communicate with the Perennial exchange from Python and read/write the following data:
