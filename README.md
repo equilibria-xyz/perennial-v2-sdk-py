@@ -89,6 +89,38 @@ If you are using Poetry, you can set up your environment with:
    poetry run python <command here>
    ```
 
-## Example usage can be found in the examples directory:
+## Example Usage
 
     Private key and RPC url will need to be added first to .env.
+
+   As of the latest release, many functions now take 
+   ```python
+   def some_func(snapshot: dict = None)
+   ```
+   as an optional argument. the reason for this is to reduce the amount of calls made to the chain such that the total time required to call large amounts of data is reduced.\
+   One example of how to use this effectively is found in the market info tests, where upon initialization of the tester class we have this:
+
+   ```python
+       def __init__(self):
+        self.client = PerennialSDK()
+        self.snapshots = self.client.market_info.get_all_snapshots()
+   ```
+
+   here we collect all the market snapshots at once via the above method, and store them as local state. Now, when we are calling all of the functions we want to test, we simply pass the relevant snapshot in as an argument like so:
+
+   ```python
+   for symbol, contract in arbitrum_markets.items():
+                try:
+                    snapshot: dict = self.snapshots[symbol]
+                    rate_dict = client.market_info.fetch_market_funding_rate(symbol, snapshot)
+                    if rate_dict:
+                        rates.append(rate_dict)
+                    else:
+                        raise Exception
+                except Exception as e:
+                    logger.exception(f'test_funding_rates - Exception occurred while fetching rates for symbol {symbol}. Error: {e}', exc_info=True)
+   ```
+
+   note that if a snapshot argument is not passed, one will be fetched automatically. Also note that if a lot of calls are being made without pre-fetched snapshots this will quite quickly start to introduce a lot of latency. For individual trades, not passing a snapshot argument is fine; if one was to perform multiple calls on a single markets one can also call an individual snapshot at the start and use it for all of the market calls.
+
+   
