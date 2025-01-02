@@ -12,6 +12,18 @@ class AccountInfo:
         self.market_reader = MarketInfo()
 
     def fetch_balance(self, contract: Contract, account_address: str = None) -> int:
+        """
+            Fetch the token balance of an account from a specified contract.
+
+            Args:
+                contract (Contract): The web3 contract object representing the token.
+                account_address (str, optional): The address of the account to fetch the balance for. Defaults to the local account.
+
+            Returns:
+                int: The token balance of the account, scaled down by the divisor.
+
+                None: If an error occurs or the balance cannot be fetched.
+        """
         try:
             if not account_address:
                 account_address = self.local_account
@@ -23,6 +35,17 @@ class AccountInfo:
             return None
 
     def fetch_usdc_balance(self, account_address: str = None) -> float:
+        """
+            Fetch the USDC balance of an account.
+
+            Args:
+                account_address (str, optional): The address of the account to fetch the balance for. Defaults to the local account.
+
+            Returns:
+                float: The USDC balance of the account.
+
+                None: If an error occurs or the balance cannot be fetched.
+        """
         try:
             if not account_address:
                 account_address = self.local_account
@@ -34,6 +57,17 @@ class AccountInfo:
             return None
 
     def fetch_dsu_balance(self, account_address: str = None) -> float:
+        """
+        Fetch the DSU balance of an account.
+
+        Args:
+            account_address (str, optional): The address of the account to fetch the balance for. Defaults to the local account.
+
+        Returns:
+            float: The DSU balance of the account.
+
+            None: If an error occurs or the balance cannot be fetched.
+        """
         try:
             if not account_address:
                 account_address = self.local_account
@@ -45,6 +79,36 @@ class AccountInfo:
             return None
 
     def fetch_open_positions(self, symbol: str, snapshot: dict = None):
+        """
+        Fetch open positions for a given market symbol.
+
+        Retrieves details about open positions for a specific market.
+
+        Args:
+            symbol (str): The symbol of the market (in lowercase) to fetch positions for (e.g., "eth").
+            snapshot (dict, optional): A pre-fetched market snapshot. If not provided,
+                                    a new snapshot is fetched for the specified symbol.
+
+        Returns:
+            dict: A dictionary containing the following position details:
+                - market (str): The symbol of the market (uppercase).
+                - side (str): The type of position ("LONG", "SHORT", or "MAKER").
+                - amount (float): The size of the position in asset units.
+                - exec_price (float): The execution price of the position.
+                - latest_price (float): The most recent price of the market.
+                - timestamp (str): The timestamp of the trade opening in UTC.
+                - pre_update_collateral (float): The collateral amount before the latest market update.
+                - post_update_collateral (float): The collateral amount after the latest market update.
+            
+            None: If no open positions are found for the given market symbol.
+
+        Logs:
+            - Logs a message if no open positions are found.
+            - Logs errors if fetching open positions fails.
+
+        Raises:
+            Exception: If there is an error processing the snapshot or fetching position details.
+        """
         try:
             if not snapshot:
                 snapshot = fetch_market_snapshot([symbol])
@@ -82,6 +146,17 @@ class AccountInfo:
             return None
 
     def get_liquidation_price_for_position(self, symbol: str) -> float:
+        """
+        Calculate the liquidation price for an open position in a specific market.
+
+        Args:
+            symbol (str): The lowercase symbol of the market to calculate the liquidation price for (e.g., "ETH").
+
+        Returns:
+            float: The calculated liquidation price for the position.
+
+            None: If an error occurs or the calculation cannot be completed.
+        """
         try:
             position_details = self.fetch_open_positions(symbol)
             maintenance_margin = self.market_reader.fetch_margin_maintenance_info()

@@ -144,6 +144,17 @@ def fetch_oracle_info(market_address: str, provider_id: str) -> dict:
 
 @time_function_call
 def fetch_market_snapshot(markets: list) -> dict:
+    """
+Fetch market snapshots for the specified markets.
+
+Args:
+    markets (list): A list of market names to fetch snapshots for.
+
+Returns:
+    dict: A dictionary containing decoded snapshot data for the specified markets.
+
+    None: If an error occurs or the snapshot data cannot be fetched.
+"""
     try:
         lens_address = utls.get_create_address(account_address, cnstnts.MAX_INT)
         lens_contract = web3.eth.contract(address=lens_address, abi=lens_abi)
