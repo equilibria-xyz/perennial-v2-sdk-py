@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "perennial_sdk"
-version = "0.1.4"
+version = "0.1.5"
 description = "An SDK to interact with the Perennial derivatives protocol."
 authors = ["l3wi"]
 readme = "README.md"

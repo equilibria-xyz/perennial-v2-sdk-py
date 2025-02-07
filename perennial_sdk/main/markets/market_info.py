@@ -1,9 +1,14 @@
+from perennial_sdk.utils import logger
 from perennial_sdk.main.markets import *
 from perennial_sdk.utils.calc_funding_rate_draft_two import calculate_funding_and_interest_for_sides
+from perennial_sdk.constants import *
+
 
 class MarketInfo:
     def __init__(self):
-        pass
+        self._market_snapshot = None
+        self._risk_parameter = None
+        self._global_info = None
 
     def get_all_snapshots(self) -> dict:
         try:
@@ -62,7 +67,6 @@ class MarketInfo:
                 "pre_update_market_price": pre_update_market_price,
                 "latest_market_price": latest_market_price
             }
-        
         except Exception as e:
             logger.error(f'market_info.py/fetch_market_price() - Error while fetching latest market price for market {symbol}. Error: {e}', exc_info=True)
             return None
@@ -106,7 +110,70 @@ class MarketInfo:
                 "maintenance_fee": maintenance_fee,
                 "min_maintenance": min_maintenance
             }
-        
         except Exception as e:
             logger.error(f'market_info.py/fetch_margin_maintenance_info() - Error while fetching latest market price for market {symbol}. Error: {e}', exc_info=True)
             return None
+
+    def _update_market_info(self, symbol: str, snapshot: dict = None):
+        try:
+            if not snapshot:
+                snapshot = fetch_market_snapshot([symbol])
+            post_update_snapshots = snapshot["postUpdate"]["marketSnapshots"][0]
+            self._market_snapshot = post_update_snapshots
+            self._risk_parameter = post_update_snapshots["riskParameter"]
+            self._global_info = post_update_snapshots["global"]
+        except Exception as e:
+            logger.error(f'market_info.py/_update_market_info() - Error updating market info for {symbol}. Error: {e}',
+                         exc_info=True)
+            return None
+
+    def get_skew(self, symbol: str = None):
+        try:
+            if symbol: self._update_market_info(symbol)
+            if not self._global_info: return 0.0
+            skew = self._global_info['pAccumulator']['_skew'] / 1e6
+            return float(skew)
+        except Exception as e:
+            logger.error(f'market_info.py/get_skew() - Error getting skew. Error: {e}', exc_info=True)
+            return 0.0
+
+    def get_scale(self, symbol: str = None):
+        try:
+            if symbol: self._update_market_info(symbol)
+            if not self._risk_parameter: return 10000.0
+            scale = self._risk_parameter['takerFee']['scale'] / 1e6
+            return float(scale)
+        except Exception as e:
+            logger.error(f'market_info.py/get_scale() - Error getting scale. Error: {e}', exc_info=True)
+            return 10000.0
+
+    def get_linear_fee(self, symbol: str = None):
+        try:
+            if symbol: self._update_market_info(symbol)
+            if not self._risk_parameter: return 0.01
+            linear_fee = self._risk_parameter['takerFee']['linearFee'] / 1e6
+            return float(linear_fee)
+        except Exception as e:
+            logger.error(f'market_info.py/get_linear_fee() - Error getting linear fee. Error: {e}', exc_info=True)
+            return 0.01
+
+    def get_proportional_fee(self, symbol: str = None):
+        try:
+            if symbol: self._update_market_info(symbol)
+            if not self._risk_parameter: return 0.005
+            proportional_fee = self._risk_parameter['takerFee']['proportionalFee'] / 1e6
+            return float(proportional_fee)
+        except Exception as e:
+            logger.error(f'market_info.py/get_proportional_fee() - Error getting proportional fee. Error: {e}',
+                         exc_info=True)
+            return 0.005
+
+    def get_adiabatic_fee(self, symbol: str = None):
+        try:
+            if symbol: self._update_market_info(symbol)
+            if not self._risk_parameter: return 0.002
+            adiabatic_fee = self._risk_parameter['takerFee']['adiabaticFee'] / 1e6
+            return float(adiabatic_fee)
+        except Exception as e:
+            logger.error(f'market_info.py/get_adiabatic_fee() - Error getting adiabatic fee. Error: {e}', exc_info=True)
+            return 0.002
