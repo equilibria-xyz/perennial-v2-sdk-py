@@ -5,13 +5,13 @@ from perennial_sdk.utils.pyth_utils import *
 from perennial_sdk.utils.decoder_utils import *
 from perennial_sdk.utils.global_utils import *
 from perennial_sdk.config import *
+from perennial_sdk.utils.test_utils import time_function_call
 from web3.contract import Contract
 from operator import attrgetter
 from perennial_sdk.utils.logger import logger
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from web3.datastructures import AttributeDict
 from multicall import Call, Multicall
-from tests.test_utils import time_function_call
 
 @time_function_call
 def fetch_oracle_info(market_address: str, provider_id: str) -> dict:

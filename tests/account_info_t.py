@@ -2,8 +2,7 @@ from perennial_sdk.sdk import PerennialSDK
 from perennial_sdk.constants import *
 from perennial_sdk.utils import *
 from perennial_sdk.main.markets.snapshot_and_oracle_info import *
-from tests.test_utils import time_function_call
-
+from perennial_sdk.utils.test_utils import time_function_call
 
 class AccountInfoTester:
     def __init__(self):
