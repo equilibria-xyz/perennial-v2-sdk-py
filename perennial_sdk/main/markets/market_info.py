@@ -11,6 +11,14 @@ class MarketInfo:
         self._global_info = None
 
     def get_all_snapshots(self) -> dict:
+        """
+        Fetch snapshots for all markets.
+
+        Returns:
+            dict: A dictionary mapping market symbols to their corresponding snapshot data.
+
+            None: If an error occurs or snapshots cannot be fetched.
+        """
         try:
             all_markets = []
             snapshot_dict = {}
@@ -39,6 +47,20 @@ class MarketInfo:
             return None
 
     def fetch_market_price(self, symbol: str, snapshot: dict = None) -> dict:
+        """
+        Fetch the pre-update and latest market prices for a specific market.
+
+        Args:
+            symbol (str): The lowercase symbol of the market to fetch the prices for (e.g., "eth").
+            snapshot (dict, optional): Pre-fetched snapshot data for the market. If not provided, the snapshot will be fetched.
+
+        Returns:
+            dict: A dictionary containing:
+                - "pre_update_market_price" (float): The market price before the update.
+                - "latest_market_price" (float): The latest market price after the update.
+
+            None: If an error occurs or the market snapshots cannot be found.
+        """
         try:
             if not snapshot:
                 snapshot = fetch_market_snapshot([symbol])
@@ -72,6 +94,20 @@ class MarketInfo:
             return None
 
     def fetch_market_funding_rate(self, symbol: str, snapshot: dict = None):
+        """
+        Fetch the net funding rates for both long and short positions in a specific market.
+
+        Args:
+            symbol (str): The lowercase symbol of the market to fetch the funding rates for (e.g., "eth").
+            snapshot (dict, optional): Pre-fetched snapshot data for the market. If not provided, the snapshot will be fetched.
+
+        Returns:
+            dict: A dictionary containing:
+                - "net_rate_long_1hr" (float): The net hourly funding rate for long positions.
+                - "net_rate_short_1hr" (float): The net hourly funding rate for short positions.
+
+            None: If an error occurs or the funding rates cannot be calculated.
+        """
         try:
             if not snapshot:
                 snapshot = fetch_market_snapshot([symbol])
@@ -90,6 +126,23 @@ class MarketInfo:
             return None
 
     def fetch_margin_maintenance_info(self, symbol: str, snapshot: dict = None):
+        """
+        Fetch margin and maintenance information for a specific market.
+
+        Args:
+            symbol (str): The lowercase symbol of the market to fetch the margin and maintenance info for (e.g., "eth").
+            snapshot (dict, optional): Pre-fetched snapshot data for the market. If not provided, the snapshot will be fetched.
+
+        Returns:
+            dict: A dictionary containing:
+                - "market" (str): The uppercase symbol of the market.
+                - "margin_fee" (float): The margin fee as a percentage.
+                - "min_margin" (float): The minimum margin required.
+                - "maintenance_fee" (float): The maintenance fee as a percentage.
+                - "min_maintenance" (float): The minimum maintenance margin required.
+
+            None: If an error occurs or the data cannot be fetched.
+        """
         try:
             if not snapshot:
                 snapshot = fetch_market_snapshot([symbol])

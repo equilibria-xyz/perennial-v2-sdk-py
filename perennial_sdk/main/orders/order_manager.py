@@ -11,9 +11,19 @@ class TxExecutor:
         pass
         
     def approve_usdc_to_multi_invoker(self, collateral_amount: float) -> str:
+        """
+        Approve a specified amount of USDC for the MultiInvoker contract.
+
+        Args:
+            collateral_amount (float): The amount of USDC (in decimal format) to approve.
+
+        Returns:
+            str: The transaction hash of the approval if successful.
+
+            None: If an error occurs during the approval process.
+        """
         try:
             amount_usdc = int(collateral_amount * 10 ** 6)
-            print(f'approving {amount_usdc} USDC to multiInvoker')
 
             approve_tx = USDC_CONTRACT.functions.approve(MULTI_INVOKER_ADDRESS, amount_usdc).build_transaction({
                 'from': account_address,
@@ -47,6 +57,18 @@ class TxExecutor:
             return None
 
     def commit_price_to_multi_invoker(self, symbol: str) -> str:
+        """
+        Commit a price to the MultiInvoker contract for a specified market symbol.
+
+        Args:
+            symbol (str): The symbol of the market for which the price is being committed.
+
+        Returns:
+            str: The transaction hash of the price commit if successful.
+
+            None: If an error occurs during the price commit process.
+        """
+
         try:
 
             oracle_data = fetch_oracle_info(
@@ -176,6 +198,19 @@ class TxExecutor:
             return None
 
     def withdraw_collateral(self, symbol: str, snapshot: dict = None) -> str:
+        """
+        Withdraw collateral from a specified market.
+
+        Args:
+            symbol (str): The symbol of the market to withdraw collateral from.
+            snapshot (dict, optional): A market snapshot. If not provided, a fresh snapshot will be fetched.
+
+        Returns:
+            str: The transaction hash of the withdrawal if successful.
+
+            None: If an error occurs during the withdrawal process.
+        """
+
         try:
             if not snapshot:
                 snapshot = fetch_market_snapshot([symbol])
@@ -240,6 +275,18 @@ class TxExecutor:
             return None
 
     def deposit_collateral(self, symbol: str, collateral_amount: float) -> str:
+        """
+        Deposit collateral into a specified market.
+
+        Args:
+            symbol (str): The symbol of the market to deposit collateral into.
+            collateral_amount (float): The amount of collateral to deposit in USD.
+
+        Returns:
+            str: The transaction hash of the deposit if successful.
+
+            None: If an error occurs during the deposit process.
+        """
         try:
             self.approve_usdc_to_multi_invoker(collateral_amount)
             amount_usdc = int(collateral_amount * 1000000)
@@ -310,6 +357,22 @@ class TxExecutor:
         collateral_amount: float
         ) -> str:
 
+        """
+        Place a market order in a specified market.
+
+        Args:
+            symbol (str): The symbol of the market to place the order in.
+            long_amount (float): The amount to long, in units of the asset (e.g. 1 ETH would be 1, half an eth = 0.5, etc).
+            short_amount (float): The amount to short, in units of the asset.
+            maker_amount (float): The amount for the maker side of the market. Typically left as 0.
+            collateral_amount (float): The collateral amount to back the position in USD.
+
+        Returns:
+            str: The transaction hash of the market order if successful.
+
+            None: If an error occurs during the order placement process.
+        """
+
         try:
             self.approve_usdc_to_multi_invoker(collateral_amount)
 
@@ -370,6 +433,20 @@ class TxExecutor:
             return None
 
     def place_limit_order(self, symbol: str, side: int, price: float, delta: float) -> str:
+        """
+        Place a limit order in a specified market.
+
+        Args:
+            symbol (str): The symbol of the market to place the limit order in.
+            side (int): The side of the order (1 for long, 2 for short).
+            price (float): The limit price for the order.
+            delta (float): The delta amount for the order (measured in whole units of the asset).
+
+        Returns:
+            str: The transaction hash of the limit order if successful.
+
+            None: If an error occurs during the order placement process.
+        """
         try:
             global comparison
             if side==1: comparison=-1
@@ -435,6 +512,18 @@ class TxExecutor:
             return None
 
     def cancel_order(self, symbol: str, nonce: int) -> str:
+        """
+        Cancel a limit order in a specified market.
+
+        Args:
+            symbol (str): The symbol of the market where the order is placed.
+            nonce (int): The nonce of the order to be canceled.
+
+        Returns:
+            str: The transaction hash of the cancel order if successful.
+
+            None: If an error occurs during the cancellation process.
+        """
         try:
             cancel_order_action = [arbitrum_markets[symbol], nonce]
             cancel_args = web3.codec.encode([
@@ -477,6 +566,19 @@ class TxExecutor:
             return None
 
     def cancel_list_of_orders(self, symbol: str, nonces: list) -> str:
+        """
+        Cancel a list of limit orders in a specified market.
+
+        Args:
+            symbol (str): The symbol of the market where the orders are placed.
+            nonces (list): A list of nonces corresponding to the orders to be canceled.
+
+        Returns:
+            str: The transaction hash of the cancel operation if successful.
+
+            None: If an error occurs during the cancellation process.
+        """
+
         try:
             cancel_invocations = []
 
@@ -521,6 +623,20 @@ class TxExecutor:
 
 
     def place_stop_loss_order(self, symbol: str, side: int, price: float, delta: float) -> str:
+        """
+        Place a stop-loss order in a specified market.
+
+        Args:
+            symbol (str): The symbol of the market where the stop-loss order is to be placed.
+            side (int): The order side; 1 for Long (Buy), 2 for Short (Sell).
+            price (float): The stop-loss trigger price.
+            delta (float): The delta value for the stop-loss order.
+
+        Returns:
+            str: The transaction hash of the stop-loss order if successfully placed.
+
+            None: If an error occurs during the stop-loss order placement.
+        """
         try:
 
             global comparison
@@ -586,6 +702,20 @@ class TxExecutor:
             return None
 
     def place_take_profit_order(self, symbol: str, side: int, price: float, delta:float) -> str:
+        """
+        Place a take-profit order in a specified market.
+
+        Args:
+            symbol (str): The symbol of the market where the take-profit order is to be placed.
+            side (int): The order side; 1 for Long (Buy), 2 for Short (Sell).
+            price (float): The take-profit trigger price.
+            delta (float): The delta value for the take-profit order.
+
+        Returns:
+            str: The transaction hash of the take-profit order if successfully placed.
+
+            None: If an error occurs during the take-profit order placement.
+        """
         try:
             global comparison
             if side==1: comparison=1
