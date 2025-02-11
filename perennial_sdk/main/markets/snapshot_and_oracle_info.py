@@ -143,13 +143,12 @@ def fetch_oracle_info(market_address: str, provider_id: str) -> dict:
         return None
 
 @time_function_call
-def fetch_market_snapshot(markets: list, useTestnet: bool = False) -> dict:
+def fetch_market_snapshot(markets: list) -> dict:
     """
 Fetch market snapshots for the specified markets.
 
 Args:
     markets (list): A list of market names to fetch snapshots for.
-    useTestnet (bool, optional): A flag to indicate whether to use the testnet. Defaults to False.
 
 Returns:
     dict: A dictionary containing decoded snapshot data for the specified markets.
@@ -165,7 +164,7 @@ Returns:
 
         def process_market(market):
             try:
-                marketAddress = arbitrum_sepolia_markets[market] if useTestnet else arbitrum_markets[market]
+                marketAddress = arbitrum_markets_per_chain.get(chain_id, arbitrum_markets)[market]
                 oracle_info = fetch_oracle_info(marketAddress, market_provider_ids[market])
                 vaa_data, publish_time = get_vaa(oracle_info['underlying_id'].hex(), oracle_info['min_valid_time'])
 

@@ -32,3 +32,9 @@ arbitrum_sepolia_markets = {
     "meem": "0x7A2fE407C4F459eD62ea75fEeBB27188e4F9E6aD",
     "sol": "0x15ba2b5D1C3eA1cfFb4541d2B1baF0Deab6aAF9B"
 }
+
+
+arbitrum_markets_per_chain = {
+    "42161": arbitrum_markets,
+    "421614": arbitrum_sepolia_markets
+}
