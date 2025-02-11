@@ -164,9 +164,8 @@ Returns:
 
         def process_market(market):
             try:
-                oracle_info = fetch_oracle_info(
-                    arbitrum_markets[market], market_provider_ids[market]
-                )
+                marketAddress = chain_markets.get(chain_id, arbitrum_markets)[market]
+                oracle_info = fetch_oracle_info(marketAddress, market_provider_ids[market])
                 vaa_data, publish_time = get_vaa(oracle_info['underlying_id'].hex(), oracle_info['min_valid_time'])
 
                 return {
@@ -177,7 +176,7 @@ Returns:
                         "ids": [Web3.to_bytes(hexstr=oracle_info['underlying_id'].hex())],
                         "updateData": Web3.to_bytes(hexstr='0x' + vaa_data)
                     },
-                    "marketAddress": arbitrum_markets[market]
+                    "marketAddress": marketAddress
                 }
             except Exception as e:
                 logger.error(
