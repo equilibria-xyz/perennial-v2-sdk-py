@@ -143,12 +143,13 @@ def fetch_oracle_info(market_address: str, provider_id: str) -> dict:
         return None
 
 @time_function_call
-def fetch_market_snapshot(markets: list) -> dict:
+def fetch_market_snapshot(markets: list, useTestnet: bool = False) -> dict:
     """
 Fetch market snapshots for the specified markets.
 
 Args:
     markets (list): A list of market names to fetch snapshots for.
+    useTestnet (bool, optional): A flag to indicate whether to use the testnet. Defaults to False.
 
 Returns:
     dict: A dictionary containing decoded snapshot data for the specified markets.
@@ -164,9 +165,8 @@ Returns:
 
         def process_market(market):
             try:
-                oracle_info = fetch_oracle_info(
-                    arbitrum_markets[market], market_provider_ids[market]
-                )
+                marketAddress = arbitrum_sepolia_markets[market] if useTestnet else arbitrum_markets[market]
+                oracle_info = fetch_oracle_info(marketAddress, market_provider_ids[market])
                 vaa_data, publish_time = get_vaa(oracle_info['underlying_id'].hex(), oracle_info['min_valid_time'])
 
                 return {
@@ -177,7 +177,7 @@ Returns:
                         "ids": [Web3.to_bytes(hexstr=oracle_info['underlying_id'].hex())],
                         "updateData": Web3.to_bytes(hexstr='0x' + vaa_data)
                     },
-                    "marketAddress": arbitrum_markets[market]
+                    "marketAddress": marketAddress
                 }
             except Exception as e:
                 logger.error(

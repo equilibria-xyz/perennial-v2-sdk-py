@@ -24,3 +24,11 @@ arbitrum_markets = {
     "aero": "0x24a305EE9BFeBeA7dC26380a96723D6Fb6066C2C",
     "popcat": "0xd1551be8c92b35212033B41dBb21efA86389768D"
     }
+
+arbitrum_sepolia_markets = {
+    "eth": "0x0142a8bfF8D887Fc4f04469fCA6c66F5e0936Ea7",
+    "cmsqETH": "0xfC51de1f1a4ddeE5AD50df492f0A642cF1894E73",
+    "xau": "0x122b781CF4fCa219aDB9704132D7fa11460D4fBa",
+    "meem": "0x7A2fE407C4F459eD62ea75fEeBB27188e4F9E6aD",
+    "sol": "0x15ba2b5D1C3eA1cfFb4541d2B1baF0Deab6aAF9B"
+}
