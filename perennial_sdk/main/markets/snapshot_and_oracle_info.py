@@ -164,7 +164,7 @@ Returns:
 
         def process_market(market):
             try:
-                marketAddress = arbitrum_markets_per_chain.get(chain_id, arbitrum_markets)[market]
+                marketAddress = chain_markets.get(chain_id, arbitrum_markets)[market]
                 oracle_info = fetch_oracle_info(marketAddress, market_provider_ids[market])
                 vaa_data, publish_time = get_vaa(oracle_info['underlying_id'].hex(), oracle_info['min_valid_time'])
 

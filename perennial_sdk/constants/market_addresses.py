@@ -34,7 +34,7 @@ arbitrum_sepolia_markets = {
 }
 
 
-arbitrum_markets_per_chain = {
+chain_markets = {
     "42161": arbitrum_markets,
     "421614": arbitrum_sepolia_markets
 }
